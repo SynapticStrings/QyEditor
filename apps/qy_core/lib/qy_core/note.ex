@@ -57,10 +57,10 @@ defmodule QyCore.Note do
 
   ### Examples
 
-  iex> QyCore.Note.parse_spn("rest")
-  :rest
-  iex> QyCore.Note.parse_spn("A4")
-  {:a, :natural, 4}
+      iex> QyCore.Note.parse_spn("rest")
+      :rest
+      iex> QyCore.Note.parse_spn("A4")
+      {:a, :natural, 4}
   """
   @spec parse_spn(raw :: <<_::16, _::_*8>>) :: note()
   def parse_spn("rest"), do: :rest
