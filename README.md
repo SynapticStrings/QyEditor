@@ -1,4 +1,4 @@
-# PicoEditor
+# [WIP]QyEditor
 
 A lightwight web synthesizer interface(exclude sythesizer).
 

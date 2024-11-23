@@ -1,4 +1,4 @@
-# PicoEditor
+# 【施工中】QyEditor
 
 轻量网页端歌曲编辑器平台。
 
