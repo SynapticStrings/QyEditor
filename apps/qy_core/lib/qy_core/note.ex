@@ -44,7 +44,7 @@ defmodule QyCore.Note do
   }
   @type note_name :: :a | :b | :c | :d | :e | :f | :g
   @type note :: {note_name(), :sharp | :flat | :natural | :ss | :ff, integer()} | :rest
-  @type note_y_frq :: {note(), number()}
+  @type note_and_frq :: {note(), number()}
 
   @spec note_to_text(note()) :: binary()
   def note_to_text({key, var, octave}) do
@@ -92,7 +92,6 @@ defmodule QyCore.Note do
   defp invalid?(note), do: note
 
   # 「修正」音符（format 是动词）
-  # 形如 bbC4 -> bB3 / ssC4 -> cD4
   @doc """
   格式化合法的音符。
 
@@ -100,6 +99,13 @@ defmodule QyCore.Note do
   的音高按照设置变成同音不同名的另一个音。
 
   例如 C## -> D 或是 Fbb -> D# 。
+
+  ## Examples
+
+      iex> QyCore.Note.format({:c, :ss, 4})
+      {:d, :natural, 4}
+      iex> QyCore.Note.format({:c, :ff, 4})
+      {:b, :flat, 3}
   """
   @spec format(note(), keyword()) :: note()
   def format(note, opts \\ [])
@@ -188,6 +194,9 @@ defmodule QyCore.Note do
   @compare_note_list [c: 1, d: 2, e: 3, f: 4, g: 5, a: 6, b: 7]
   @compare_var_list [ff: -2, flat: -1, natural: 0, sharp: 1, ss: 2]
 
+  @doc """
+  比较两个音符的高低。
+  """
   @spec higher?(note_1 :: note(), note_2 :: note()) :: boolean()
   def higher?(note_1, note_2) when is_atom(note_1) do
     Keyword.fetch!(@compare_note_list, note_1) > Keyword.fetch!(@compare_note_list, note_2)
@@ -219,7 +228,7 @@ defmodule QyCore.Note do
     do: format(note_1) |> do_format(:sharp) == format(note_2) |> do_format(:sharp)
 
   # 将音符转变为对应的频率
-  # @spec do_convert_note(note(), tuning_format(), note_y_frq()) :: float()
+  # @spec do_convert_note(note(), tuning_format(), note_and_frq()) :: float()
   def do_convert_note(note, format \\ :twelve_et, base_note \\ {{:a, nil, 4}, 440.0})
 
   def do_convert_note(:rest, _, _), do: +0.0
@@ -233,9 +242,14 @@ defmodule QyCore.Note do
 
   def do_convert_note(_note, _format, _base_note), do: raise("Not Implemented")
 
-  # 通过改变基音使其「靠近」所需的音
   # 用递归可以做，也可以直接乘上 2 的倍数
-  @spec octive_operate(note_y_frq(), note()) :: note_y_frq()
+  @doc """
+  调整基音的八度，使其与目标音的八度对齐。
+
+  该函数会根据基音与目标音的八度差异，递归地将基音的八度逐步调整至目标音的八度范围内；
+  如果基音和目标音的八度相同，则返回原始值。
+  """
+  @spec octive_operate(note_and_frq(), note()) :: note_and_frq()
   def octive_operate(_, {:invalid, _, _}), do: {:error, :invalid_note}
 
   def octive_operate({{:invalid, _, _}, _}, _), do: {:error, :invalid_note}

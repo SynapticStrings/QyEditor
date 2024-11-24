@@ -47,7 +47,7 @@ defmodule QyCore.Note.Distance do
   计算频率。
   """
   @callback calulate_distance_pitch(
-              base_note_and_pitch :: Note.note_y_frq(),
+              base_note_and_pitch :: Note.note_and_frq(),
               target_note :: Note.note()
             ) :: number()
 

@@ -105,8 +105,13 @@ defmodule QyCore.NoteTest do
                {:perfect, 8}
     end
 
-    test "纯四度", do: nil
-    test "纯五度", do: nil
+    test "纯四度" do
+      assert Distance.calulate_distance_sign({:c, :natural, 4}, {:f, :natural, 4}) == {:perfect, 4}
+    end
+
+    test "纯五度" do
+      assert Distance.calulate_distance_sign({:c, :natural, 4}, {:g, :natural, 4}) == {:perfect, 5}
+    end
   end
 
   describe "十二平均律下的音高计算" do
@@ -122,7 +127,7 @@ defmodule QyCore.NoteTest do
       assert_in_delta TET.calulate_distance_pitch(base, {:b, :natural, 7}), 3951.1, 0.1
     end
 
-    # 加管弦乐趋势的音高（A4 = 442 Hz）吗？
+    # 加管弦乐曲式的音高（A4 = 442 Hz）吗？
 
     test "", do: nil
 

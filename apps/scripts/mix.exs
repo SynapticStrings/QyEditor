@@ -26,7 +26,9 @@ defmodule QyScripts.MixProject do
   defp deps do
     [
       # JSON parser
-      {:poison, "~> 6.0"}
+      {:poison, "~> 6.0"},
+      # QyCore
+      {:qy_core, in_umbrella: true}
     ]
   end
 end
