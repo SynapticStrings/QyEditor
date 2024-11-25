@@ -1,4 +1,5 @@
 defmodule QyCore.Params.BezierCurve.Drawer do
+  # 实在不行就用 NIF 吧
   alias QyCore.Params.BezierCurve
 
   # 这个函数抄的 https://developer.aliyun.com/article/678181
@@ -10,16 +11,18 @@ defmodule QyCore.Params.BezierCurve.Drawer do
   def draw(control_points, step) when 0.0 < step and step <= 1.0 do
     control_points_num = length(control_points)
 
-    do_draw(control_points, control_points_num, step)
+    do_draw(control_points, control_points_num, step) |> :lists.reverse()
   end
 
   def draw(_, _), do: raise("Step only can between 0.0 and 1.0.")
 
   defp do_draw(control_points, control_points_num, step, range \\ +0.0, curve_points \\ [])
 
-  defp do_draw(_, _, step, range, curve_points) when range > (1.0 + step), do: curve_points
+  # Include liat points
+  defp do_draw(_, _, step, range, curve_points) when range >= (1.0 + step), do: curve_points
 
   defp do_draw(control_points, control_points_num, step, range, curve_points) do
+    # 反正 add_point/3 只返回一个点，BEAM 系变量不可变，可劲整
     new = add_point(control_points, control_points_num, range) |> IO.inspect(label: range)
 
     do_draw(
@@ -27,25 +30,28 @@ defmodule QyCore.Params.BezierCurve.Drawer do
       control_points_num,
       step,
       range + step,
-      curve_points ++ [new]
+      [new | curve_points]
+      # Add from tail, so in outie of func will reverse again.
     )
   end
 
-  # if (points.Length < 1) { /* 一个点都没有 */
-  #   throw new ArgumentOutOfRangeException(); }
+  # 一点控制点也没有
   defp add_point(_, control_points_num, _) when control_points_num <= 0, do: raise("control points' number less than 1.")
 
-  # if (count == 1) { return points[0]; }
-  defp add_point(points, 1, _), do: points |> :lists.reverse() |> hd()
+  # 只有一个控制点，返回第一个
+  defp add_point(points, 1, _), do: points |> hd()
 
   defp add_point(control_points, control_points_num, range) do
-    [_ | seq2] = [control_points] |> :lists.flatten()
+    control_points = List.wrap(control_points)
 
-    seq1 =
-      [control_points] |> :lists.flatten() |> :lists.reverse() |> tl() |> :lists.reverse()
+    # Tail
+    [_ | seq1] = control_points
 
-    # opt_points = for p2 <- seq2, p1 <- seq1, do: execute_calc_point(p1, p2, range)
-    opt_points = Enum.zip_with(seq2, seq1, fn p2, p1 -> execute_calc_point(p1, p2, range) end)
+    # Remove tail
+    # :lists.droplast/1 more slowly, but use less memory space.
+    seq2 = control_points |> :lists.reverse() |> tl() |> :lists.reverse()
+
+    opt_points = Enum.zip_with(seq1, seq2, fn p1, p2 -> execute_calc_point(p1, p2, range) end)
 
     add_point(opt_points, control_points_num - 1, range)
   end
