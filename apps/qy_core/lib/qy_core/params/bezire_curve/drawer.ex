@@ -3,6 +3,7 @@ defmodule QyCore.Params.BezierCurve.Drawer do
   alias QyCore.Params.BezierCurve
 
   # 这个函数抄的 https://developer.aliyun.com/article/678181
+  # 有了不少魔改
   @spec draw(list(BezierCurve.location()), float()) :: list(BezierCurve.location())
   def draw(control_points, _step) when length(control_points) == 1 do
     control_points
@@ -18,12 +19,12 @@ defmodule QyCore.Params.BezierCurve.Drawer do
 
   defp do_draw(control_points, control_points_num, step, range \\ +0.0, curve_points \\ [])
 
-  # Include liat points
+  # Include last points
+  # 因为精度的问题所以用了这个比较奇葩的方式来做
   defp do_draw(_, _, step, range, curve_points) when range >= (1.0 + step), do: curve_points
 
   defp do_draw(control_points, control_points_num, step, range, curve_points) do
-    # 反正 add_point/3 只返回一个点，BEAM 系变量不可变，可劲整
-    new = add_point(control_points, control_points_num, range) |> IO.inspect(label: range)
+    new = add_point(control_points, control_points_num, range)
 
     do_draw(
       control_points,

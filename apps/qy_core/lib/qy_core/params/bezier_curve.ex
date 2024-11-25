@@ -1,6 +1,12 @@
 defmodule QyCore.Params.BezierCurve do
-  # 贝塞尔曲线
+  @moduledoc """
+  参数贝塞尔曲线绘制的相关函数。
+  """
   # 此模块深度参考了 http://www.whudj.cn/?p=384
+
+  @typedoc """
+  点的坐标。
+  """
   @type location :: {number(), number()}
 
   @spec draw(list(location()), float()) :: list(location())
@@ -14,4 +20,7 @@ defmodule QyCore.Params.BezierCurve do
 
   # 从曲线到映射的参数（类似于 Cadencii 的功能）
   # 到 ds 脚本的就是纯参数了
+
+  # 约束
+  # 比方说一个时间不存在两组参数
 end
