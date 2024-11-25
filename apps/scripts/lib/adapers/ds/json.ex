@@ -1,7 +1,7 @@
 defmodule QyScript.DS.JSON do
   alias QyScript.DS.Sentence
 
-  @spec from_json(list(map())) :: list()
+  @spec from_json(list(map())) :: list(Sentence.t())
   def from_json(sentence_list) do
     sentence_list
     |> Enum.map(fn s ->
@@ -12,7 +12,16 @@ defmodule QyScript.DS.JSON do
     end)
   end
 
-  def to_json(_sentence_list), do: []
+  @spec to_json(list(Sentence.t())) :: list(map())
+  def to_json(sentence_list) do
+    # Note tested.
+    sentence_list
+    |> Enum.map(fn s ->
+      parse_note(s, :sentence)
+      |> Map.merge(parse_words(s, :sentence))
+      |> Map.merge(parse_offset_and_params(s, :sentence))
+    end)
+  end
 
   def parse_note(sentence, from) do
     # Prelude
