@@ -7,18 +7,20 @@ defmodule QyCore.Params.BezierCurve.Drawer do
     control_points
   end
 
-  def draw(control_points, step) do
+  def draw(control_points, step) when 0.0 < step and step <= 1.0 do
     control_points_num = length(control_points)
 
     do_draw(control_points, control_points_num, step)
   end
 
+  def draw(_, _), do: raise("Step only can between 0.0 and 1.0.")
+
   defp do_draw(control_points, control_points_num, step, range \\ +0.0, curve_points \\ [])
 
-  defp do_draw(_, _, _, range, curve_points) when range > 1.0, do: curve_points
+  defp do_draw(_, _, step, range, curve_points) when range > (1.0 + step), do: curve_points
 
   defp do_draw(control_points, control_points_num, step, range, curve_points) do
-    new = add_point(control_points, control_points_num, range)
+    new = add_point(control_points, control_points_num, range) |> IO.inspect(label: range)
 
     do_draw(
       control_points,
@@ -29,8 +31,11 @@ defmodule QyCore.Params.BezierCurve.Drawer do
     )
   end
 
-  defp add_point(_, control_points_num, _) when control_points_num <= 0, do: :error
+  # if (points.Length < 1) { /* 一个点都没有 */
+  #   throw new ArgumentOutOfRangeException(); }
+  defp add_point(_, control_points_num, _) when control_points_num <= 0, do: raise("control points' number less than 1.")
 
+  # if (count == 1) { return points[0]; }
   defp add_point(points, 1, _), do: points |> :lists.reverse() |> hd()
 
   defp add_point(control_points, control_points_num, range) do
@@ -39,7 +44,8 @@ defmodule QyCore.Params.BezierCurve.Drawer do
     seq1 =
       [control_points] |> :lists.flatten() |> :lists.reverse() |> tl() |> :lists.reverse()
 
-    opt_points = for p2 <- seq2, p1 <- seq1, do: execute_calc_point(p1, p2, range)
+    # opt_points = for p2 <- seq2, p1 <- seq1, do: execute_calc_point(p1, p2, range)
+    opt_points = Enum.zip_with(seq2, seq1, fn p2, p1 -> execute_calc_point(p1, p2, range) end)
 
     add_point(opt_points, control_points_num - 1, range)
   end
