@@ -19,10 +19,8 @@ erl_crash.dump
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
 
+# Ignore package tarball (built via "mix hex.build").
+diff_singer-*.tar
+
 # Temporary files, for example, from tests.
 /tmp/
-
-## Model related.
-/models/*
-/priv/*
-!.gitkeep
