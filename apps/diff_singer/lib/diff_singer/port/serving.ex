@@ -21,9 +21,9 @@ defmodule DiffSinger.Port.Serving do
   """
   @behaviour Nx.Serving
 
-  def init(_type, _arg, _list) do
+  def init(_type, _arg, [_defn_options]) do
     # 总得返回个东西回来
-    {:ok, fn -> nil end}
+    {:ok, fn _ -> nil end}
   end
 
   def handle_batch(_arg0, _partition, _state) do
