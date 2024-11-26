@@ -32,10 +32,11 @@ defmodule DiffSinger.MixProject do
     [
       {:nx, "~> 0.8"},
       # Use it until my fork can running ONNXRuntime
-      # on Intel Arc via OpenVINO.
-      {:ortex, "~> 0.1.0"}
-      # Only used when in development.
-      # Inspect the model
+      # on Intel Arc via OpenVINO EP.
+      {:ortex, "~> 0.1.0"},
+      # Doesn't need highly perfermence here.
+      # Or `https://github.com/KamilLelonek/yaml-elixir`?
+      {:yamerl, "~> 0.10.0"}
     ]
   end
 end
