@@ -33,7 +33,7 @@ defmodule DiffSinger.MixProject do
       # {:nx, "~> 1.0"},
       # Use it until my fork can running ONNXRuntime
       # on Intel Arc via OpenVINO.
-      # {:ortex, git: "github.com/elixir-nx/ortex"}
+      {:ortex, "~> 0.1.0"}
     ]
   end
 end

@@ -1,6 +1,6 @@
 defmodule DiffSinger do
   @moduledoc """
-  Documentation for `DiffSinger`.
+  `DiffSinger` 的 Elixir 端。
   """
 
   @doc """
