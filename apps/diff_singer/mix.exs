@@ -30,10 +30,12 @@ defmodule DiffSinger.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:nx, "~> 1.0"},
+      {:nx, "~> 0.8"},
       # Use it until my fork can running ONNXRuntime
       # on Intel Arc via OpenVINO.
       {:ortex, "~> 0.1.0"}
+      # Only used when in development.
+      # Inspect the model
     ]
   end
 end
