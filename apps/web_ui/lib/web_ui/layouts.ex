@@ -10,5 +10,5 @@ defmodule WebUI.Layouts do
   """
   use WebUI, :html
 
-  embed_templates "layouts/*"
+  embed_templates "layouts_templates/*"
 end
