@@ -22,9 +22,10 @@ defmodule DiffSinger.Model.AutoDiscover do
     |> Path.wildcard()
   end
 
-  def find_models_common_name(model_paths \\ [""]) do
+  # 返回出现最多的词语作为名字
+  def get_model_name_with_file_name(model_paths \\ [""]) do
     [{first_freq_item, _} | _] = model_paths
-    |> Enum.map(&get_model_name/1)
+    |> Enum.map(&Path.basename(&1, ".onnx"))
     # 把所有存在的共同部分统计出来
     # 不考虑通用格式了，太麻烦
     |> Enum.map(&String.split(&1, [".", "_"]))
@@ -35,17 +36,15 @@ defmodule DiffSinger.Model.AutoDiscover do
     first_freq_item
   end
 
-  def get_model_name(model_path), do: Path.basename(model_path, ".onnx")
-
-  def get_model_mappers_as_roles(model_paths \\ [""]) do
-    Enum.map(model_paths, &get_model_name/1)
+  #
+  def get_model_name_from_dsconfig(file_path) do
+    file_path
+    |> :yamerl.decode_file()
   end
 
   def get_vocoder(model_name_list) do
     model_name_list
-    |> Enum.map(&String.split(&1, ["."]))
-    |> Enum.reject(&(length(&1) > 1))
-    |> List.flatten()
+    |> Enum.find(&String.contains?(&1, ["nsf", "hifigan"]))
   end
 
   _comment = """
