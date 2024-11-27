@@ -32,7 +32,7 @@ defmodule QyCore.Note do
     "g" => :g
   }
   @note_convert_to_text @note_convertor
-                        |> Enum.filter(fn {k, _} -> k in String.split("ABCDEFG") end)
+                        |> Enum.filter(fn {k, _} -> k in String.split("A B C D E F G") end)
                         |> Enum.map(fn {k, v} -> {v, k} end)
                         |> Enum.into(%{})
   @var_convertor_to_text %{
@@ -51,6 +51,8 @@ defmodule QyCore.Note do
     Map.get(@note_convert_to_text, key) <>
       Map.get(@var_convertor_to_text, var) <> Integer.to_string(octave)
   end
+
+  def note_to_text(:rest), do: "rest"
 
   @doc """
   将音符从文本变成 `note()` 。

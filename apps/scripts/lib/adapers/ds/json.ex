@@ -8,18 +8,17 @@ defmodule QyScript.DS.JSON do
       parse_note(s, :json)
       |> Map.merge(parse_words(s, :json))
       |> Map.merge(parse_offset_and_params(s, :json))
-      |> Enum.into(%Sentence{})
+      |> then(&struct(Sentence, &1))
     end)
   end
 
   @spec to_json(list(Sentence.t())) :: list(map())
   def to_json(sentence_list) do
-    # Note tested.
     sentence_list
     |> Enum.map(fn s ->
-      parse_note(s, :sentence)
-      |> Map.merge(parse_words(s, :sentence))
-      |> Map.merge(parse_offset_and_params(s, :sentence))
+      parse_note(s, :struct)
+      |> Map.merge(parse_words(s, :struct))
+      |> Map.merge(parse_offset_and_params(s, :struct))
     end)
   end
 
@@ -136,10 +135,9 @@ defmodule QyScript.DS.JSON do
 
       :struct ->
         sentence
-        |> Map.from_struct()
         |> Map.to_list()
         |> Enum.filter(fn {k, _} -> k in keys_list end)
-        |> Enum.reduce(%{}, fn {k, v}, map -> %{map | k => value_operate_func.(v)} end)
+        |> Enum.map(fn {k, v} -> {k, value_operate_func.(v)} end)
         |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
     end
     |> Enum.into(%{})
