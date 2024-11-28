@@ -29,12 +29,15 @@ defmodule DiffSinger.Graph.Port do
     port.from
   end
 
-  def build_edge_path(port_1, port_2) when connectable?(port_1, port_2) do
-    # from, to
-    case port_1.role do
-      :input -> {port_1, port_2}
-      :output -> {port_2, port_1}
+  def build_edge_path(port_1, port_2) do
+    cond do
+      connectable?(port_1, port_2) ->
+        # from, to
+        case port_1.role do
+        :input -> {port_1, port_2}
+        :output -> {port_2, port_1}
+      end
+      true -> {:error, :does_not_connectable}
     end
   end
-  def build_edge_path(_p1, _p2), do: {:error, :does_not_connectable}
 end

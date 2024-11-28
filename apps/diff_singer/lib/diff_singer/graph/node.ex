@@ -18,4 +18,9 @@ defmodule DiffSinger.Graph.Node do
   def build(name, model, ports) do
     %__MODULE__{name: name, reference: model, ports: ports}
   end
+
+  def run(%__MODULE__{} = node, inputs, execute_func)
+      when is_function(execute_func, 2) do
+    execute_func.(node, inputs)
+  end
 end
