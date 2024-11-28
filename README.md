@@ -1,9 +1,9 @@
-# [WIP]QyEditor
+# 【施工中】QyEditor
 
-A lightwight web synthesizer interface(exclude sythesizer).
+[English](README.en.md)
 
-[简体中文](README.zh-CN.md)
+轻量网页端歌曲编辑器平台。
 
-## Feature
+## 特点
 
-* Bézier curve(inspired from Cadencii)
+* 贝塞尔曲线/手绘的参数调节
