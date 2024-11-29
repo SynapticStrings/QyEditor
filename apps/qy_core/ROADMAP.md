@@ -112,8 +112,52 @@
 ### 流程
 
 ```mermaid
-graph TB
-TBD["TODO"]
+%% Using https://mermaid.live/
+flowchart TD
+subgraph DSDur
+  d_ling[dur.linguistic]
+  d_dur[dur.dur]
+  d_ling -->|encoder_out| d_dur
+  d_ling -->|x_masks| d_dur
+end
+
+subgraph DSPitch
+  p_ling[pitch.linguistic]
+  p_pitch[pitch.pitch]
+  p_ling -->|encoder_out| p_pitch
+  p_ling -->|x_masks| p_pitch
+end
+
+d_dur -->|ph_dur_pred| ph_dur
+ph_dur -->  p_ling
+p(pitch) -->|pitch| p_pitch -->|pitch_pred| p
+
+subgraph DSVariance
+  v_ling[multivar.linguistic]
+  v_var[multivar.variance]
+  v_ling -->|encoder_out| v_var
+end
+
+ph_dur --> v_ling
+p --> v_ling
+v_var -->|breathiness_pred| br(breathiness)
+v_var -->|voicing_pred| vc(voicing)
+
+subgraph Acoustic
+  a[acoustic]
+end
+
+br --> a
+vc --> a
+p --> a
+ph_dur --> a
+
+subgraph Vocoder
+  v[nsf_hifigan]
+end
+
+a -->|mel| v
+p -->|f0| v --> o(waveform)
 ```
 
 ## Ort 使用 DiffSinger 的可行性
