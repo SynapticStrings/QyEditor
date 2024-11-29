@@ -33,7 +33,7 @@
 
 ### Elixir 上运行 DiffSinger 的可行性分析
 
-请参考 [ROADMAP](/apps/qy_core/ROADMAP.md) 。
+请参考 [ROADMAP](/apps/diff_singer/ROADMAP.md) 。
 
 ### 贝塞尔曲线的相关工具与网页端参数编辑
 

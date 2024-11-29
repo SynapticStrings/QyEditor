@@ -1,7 +1,8 @@
 defmodule DiffSinger.Graph.Node do
   alias DiffSinger.Graph
 
-  @type node_name :: atom()
+  @type node_scope :: atom()
+  @type node_name :: {node_scope(), String.t()}
   @type t :: %__MODULE__{
     name: node_name(),
     reference: any(),
@@ -17,6 +18,10 @@ defmodule DiffSinger.Graph.Node do
   end
   def build(name, model, ports) do
     %__MODULE__{name: name, reference: model, ports: ports}
+  end
+
+  def same_scope?({scope1, _}, {scope2, _}) do
+    scope1 == scope2
   end
 
   def run(%__MODULE__{} = node, inputs, execute_func)
