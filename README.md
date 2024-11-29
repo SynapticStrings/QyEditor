@@ -33,37 +33,7 @@
 
 ### Elixir 上运行 DiffSinger 的可行性分析
 
-#### 梳理 DiffSinger 模型的推理流程
-
-主要指的是 OpenVPI 维护的版本。
-
-大致分成方差模型（Variance Model）、声学模型（Acoustic Model）以及声码器（Vocoder）三个部分。
-
-以 Qixuan 为例，其目录为下：
-
-```tree
-~\CODE\QYEDITOR\PRIV\QIXUAN_V2.5.0_DIFFSINGER_OPENUTAU
-├─dsdur
-├─dspitch
-├─dsvariance
-└─dsvocoder
-```
-
-在项目的根目录也存在着一系列的模型，其主要是 acoustic model。
-
-#### Ort 使用 DiffSinger 的可行性
-
-*如果这个也不行的话，那就放弃吧。*
-
-### 声库模型的自动查找与尝试组织
-
-主要有三种使用场景：
-
-1. 解压了的 OpenUTAU 声库
-2. 单纯的一堆 onnx 文件
-3. onnx 文件以及确定了的配置
-
-后者只需设计好相对应的规范，按照设置来确定模型的步骤即可。
+请参考 [ROADMAP](/apps/qy_core/ROADMAP.md) 。
 
 ### 贝塞尔曲线的相关工具与网页端参数编辑
 
