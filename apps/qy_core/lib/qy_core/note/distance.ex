@@ -46,7 +46,7 @@ defmodule QyCore.Note.Distance do
   @doc """
   计算频率。
   """
-  @callback calulate_distance_pitch(
+  @callback calculate_distance_pitch(
               base_note_and_pitch :: Note.note_and_frq(),
               target_note :: Note.note()
             ) :: number()
@@ -197,7 +197,7 @@ defmodule QyCore.Note.Distance.TwelveETAdapter do
   alias QyCore.{Note.Distance}
   @behaviour Distance
 
-  def calulate_distance_pitch({{bkey, bvar, boctave}, base_pitch}, {_, _, toctave} = target_note) do
+  def calculate_distance_pitch({{bkey, bvar, boctave}, base_pitch}, {_, _, toctave} = target_note) do
     # 就是因为转调算音简单，十二平均律才用得多
     pitch_under_same_octave = base_pitch * 2 ** (toctave - boctave)
 

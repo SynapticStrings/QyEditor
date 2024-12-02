@@ -120,11 +120,11 @@ defmodule QyCore.NoteTest do
     test "国际标准音高" do
       base = {{:a, :natural, 4}, 440.0}
 
-      assert_in_delta TET.calulate_distance_pitch(base, {:a, :natural, 4}), 440.0, 0.01
+      assert_in_delta TET.calculate_distance_pitch(base, {:a, :natural, 4}), 440.0, 0.01
 
-      assert_in_delta TET.calulate_distance_pitch(base, {:c, :natural, 4}), 261.63, 0.01
+      assert_in_delta TET.calculate_distance_pitch(base, {:c, :natural, 4}), 261.63, 0.01
 
-      assert_in_delta TET.calulate_distance_pitch(base, {:b, :natural, 7}), 3951.1, 0.1
+      assert_in_delta TET.calculate_distance_pitch(base, {:b, :natural, 7}), 3951.1, 0.1
     end
 
     # 加管弦乐曲式的音高（A4 = 442 Hz）吗？

@@ -239,7 +239,7 @@ defmodule QyCore.Note do
     # If it is too slowly, pleae use NIF.
     base_pair
     |> octive_operate(note)
-    |> Note.Distance.TwelveETAdapter.calulate_distance_pitch(note)
+    |> Note.Distance.TwelveETAdapter.calculate_distance_pitch(note)
   end
 
   def do_convert_note(_note, _format, _base_note), do: raise("Not Implemented")
