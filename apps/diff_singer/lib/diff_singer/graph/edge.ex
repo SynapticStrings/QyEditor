@@ -1,17 +1,17 @@
 defmodule DiffSinger.Graph.Edge do
   alias DiffSinger.Graph
 
-  @type option_type :: %{
+  @type option_type :: [
     allow_mannual_input: boolean(),
     # if true, graph will has a vitural injectable port at `to_port` side
-    connect_differe_scope: boolean() | nil,
+    connect_different_scope: boolean() | nil,
     # two ports at different scopes
-  } # | nil
+  ] # | nil
 
-  @default_options %{
+  @default_options [
     allow_mannual_input: true,
-    connect_differe_scope: nil
-  }
+    connect_different_scope: nil
+  ]
   @type t :: %__MODULE__{
     name: atom(),
     type: any(),

@@ -15,6 +15,7 @@ defmodule DiffSinger.Graph.Port do
 
   def as_input?(%__MODULE__{role: :input}), do: true
   def as_input?(%__MODULE__{role: :output}), do: false
+  def as_input?(port), do: raise "Invalid port role, get #{inspect(port)}"
 
   def connectable?(%__MODULE__{} = port_1, %__MODULE__{} = port_2, type_validate_func)
       when is_function(type_validate_func) do
