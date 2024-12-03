@@ -58,9 +58,10 @@ defmodule PhonemeConvetor do
       unquote(save_repos_ast)
       # 并且实现从语言/音素名字到 id 的转化函数
       def convert_ph(lang, phoneme) do
-        cond do
-          phoneme in ["AP", "SP"] -> Map.get(@phonemes_repo, phoneme)
-          true -> Map.get(@phonemes_repo, lang <> "/" <> phoneme)
+        if phoneme in ["AP", "SP"] do
+          Map.get(@phonemes_repo, phoneme)
+        else
+          Map.get(@phonemes_repo, lang <> "/" <> phoneme)
         end
       end
       def convert_lang(lang) do
@@ -69,6 +70,9 @@ defmodule PhonemeConvetor do
     end
   end
 
+  # 这种设计原则在 phoenix_installer 上看过，
+  # 在 elixirforum 的一个回答上也看过，
+  # 但暂时不知道它的实现原理是什么
   defmacro root_path(opts) do
     quote bind_quoted: [root_path: opts] do
       @root_path root_path
@@ -84,7 +88,13 @@ defmodule OrtexRunnable do
   defmacro __using__(_opts) do
     quote do
       # @behavior unquote(__MODULE__)
-      # import unquote(__MODULE__)
+      import unquote(__MODULE__), only: [root_path: 1]
+    end
+  end
+
+  defmacro root_path(opts) do
+    quote bind_quoted: [root_path: opts] do
+      @root_path root_path
     end
   end
 
@@ -112,16 +122,19 @@ end
 
 ## 音高的预测
 defmodule DSPitch do
-  # use PhonemeConvetor, lang: "zh"
+  use PhonemeConvetor
+  root_path Path.join(model_path, ["dspitch"])
 end
 
 ## 方差模型
 defmodule DSVariance do
-  # use PhonemeConvetor, lang: "zh"
+  use PhonemeConvetor
+  root_path Path.join(model_path, ["dsvariance"])
 end
 
 defmodule DSAcoustic do
-  # use PhonemeConvetor, lang: "zh"
+  use PhonemeConvetor
+  root_path Path.join(model_path, [""])
 end
 
 defmodule DSVocoder do
