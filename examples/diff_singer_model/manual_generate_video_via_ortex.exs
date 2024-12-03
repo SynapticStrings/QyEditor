@@ -18,40 +18,6 @@ unless File.exists?(project_path) do
   IO.puts("Create project folder")
 end
 
-## 另一些前期准备
-# 语言 id
-languages_repo = fn relative_model_root_path ->
-  [file] = Path.wildcard(relative_model_root_path <> "/*.languages.json")
-
-  file
-  |> File.read!()
-  |> Jason.decode!()
-end
-language_id_fetcher = fn lang_ids, lang -> Map.get(lang_ids, lang) end
-
-# 拼音 id
-phonemes_repo = fn relative_model_root_path ->
-  [file] = Path.wildcard(relative_model_root_path <> "/*.phonemes.json")
-
-  file
-  |> File.read!()
-  |> Jason.decode!()
-end
-phoneme_id_fetcher = fn phoneme_ids, lang, phoneme ->
-  cond do
-    phoneme in ["AP", "SP"] -> Map.get(phoneme_ids, phoneme)
-    true -> Map.get(phoneme_ids, lang <> "/" <> phoneme)
-  end
-end
-
-# 要不要干脆用 OpenUTAU 调教一下把参数导出来？
-## 歌曲的基本信息
-# （用这个是因为手头没其他合适的谱子了，以及一种对未完成情结的补足，或升华）
-# 砂糖协会 - 雨后甜点 的第一句：
-# 与梦游的流星和漫不经心云 徘徊在午后水汽里 小心思交织漂浮 亲吻不安定
-_songLang = "zh"
-_songBPM = 128.0
-
 ## 信息的编码
 
 # 时间（基于 BPM 以及歌词的节拍）
@@ -63,22 +29,50 @@ defmodule PhonemeConvetor do
   """
   defmacro __using__(_opts) do
     quote do
-      # 从模块中调用 @root_path 这个属性
-      _root_path = Module.get_attribute(__MODULE__, :root_path)
-
-      # @before_compile unquote(__MODULE__)
-
-      # 并且实现从语言/音素名字到 id 的转化函数
-      def convert_ph(phone), do: phone
-      def convert_lang(lang), do: lang
+      # TODO
+      # 为什么 require 不行
+      import unquote(__MODULE__), only: [root_path: 1]
+      @before_compile unquote(__MODULE__)
     end
   end
 
-  defmacro __before_compile__(_env) do
+  defmacro __before_compile__(env) do
     # 为加快速度，对字典的读取最好在编译前完成
     # 将其变成一个仅有 __using__ 的函数可以使用的属性
-    # Module.register_attribute(__MODULE__, :phoneme_dict)
-    # Module.put_attribute(__MODULE__, :phoneme_dict)
+    save_repos_ast = for target <- [:phonemes, :languages] do
+      root_path = Module.get_attribute(env.module, :root_path)
+
+      [file] = Path.wildcard(root_path <> "/*.#{target}.json")
+
+      repo = file
+      |> File.read!()
+      |> Jason.decode!()
+
+      Module.put_attribute(env.module, :"#{target}_repo", repo)
+    end
+
+    quote do
+      # 就把读取出来的结果当成属性保存就行了
+      Module.register_attribute(__MODULE__, :phonemes_repo, persist: true)
+      Module.register_attribute(__MODULE__, :languages_repo, persist: true)
+      unquote(save_repos_ast)
+      # 并且实现从语言/音素名字到 id 的转化函数
+      def convert_ph(lang, phoneme) do
+        cond do
+          phoneme in ["AP", "SP"] -> Map.get(@phonemes_repo, phoneme)
+          true -> Map.get(@phonemes_repo, lang <> "/" <> phoneme)
+        end
+      end
+      def convert_lang(lang) do
+        Map.get(@languages_repo, lang)
+      end
+    end
+  end
+
+  defmacro root_path(opts) do
+    quote bind_quoted: [root_path: opts] do
+      @root_path root_path
+    end
   end
 end
 
@@ -101,25 +95,33 @@ defmodule OrtexRunnable do
   @callback run() :: any()
 end
 
+# 要不要干脆用 OpenUTAU 调教一下把参数导出来？
+## 歌曲的基本信息
+# （用这个是因为手头没其他合适的谱子了，以及一种对未完成情结的补足，或升华）
+# 砂糖协会 - 雨后甜点 的第一句：
+# 与梦游的流星和漫不经心云 徘徊在午后水汽里 小心思交织漂浮 亲吻不安定
+_songLang = "zh"
+_songBPM = 128.0
+
 ## 音素时长的预测
 defmodule DSDur do
-  use PhonemeConvetor, lang: "zh"
+  use PhonemeConvetor
   # use OrtexRunnable
-  # @root_path Path.join(model_path, ["dsdur"])
+  root_path Path.join(model_path, ["dsdur"])
 end
 
 ## 音高的预测
 defmodule DSPitch do
-  use PhonemeConvetor, lang: "zh"
+  # use PhonemeConvetor, lang: "zh"
 end
 
 ## 方差模型
 defmodule DSVariance do
-  use PhonemeConvetor, lang: "zh"
+  # use PhonemeConvetor, lang: "zh"
 end
 
 defmodule DSAcoustic do
-  use PhonemeConvetor, lang: "zh"
+  # use PhonemeConvetor, lang: "zh"
 end
 
 defmodule DSVocoder do
