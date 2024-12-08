@@ -47,6 +47,8 @@ defmodule DiffSinger.Model.AutoDiscover do
     |> Enum.find(&String.contains?(&1, ["nsf", "hifigan"]))
   end
 
+  # def build(_otau_model_root_path, _opts)
+
   _comment = """
 
   # root_path = "priv/Qixuan_v2.5.0_DiffSinger_OpenUtau"

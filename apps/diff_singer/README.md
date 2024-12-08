@@ -1,6 +1,6 @@
 # DiffSinger
 
-Elixir's DiffSinger port.
+DiffSinger 的 Elixir 包装。
 
 ## Feature
 
