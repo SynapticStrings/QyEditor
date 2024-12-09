@@ -218,6 +218,9 @@ defmodule QyCore.Note.Distance.PythagoreanAdapter do
   alias QyCore.{Note.Distance}
   @behaviour Distance
 
+  # [TODO)
+  # 需不需要再单独讨论升降音？
+
   def calculate_distance_pitch(_base_note_and_pitch, _target_note) do
     # 操作到一个八度
     # 算他们之间间音的距离
