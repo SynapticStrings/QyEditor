@@ -1,3 +1,3 @@
 # QyCore
 
-Core of editor.
+编辑器的核心业务。

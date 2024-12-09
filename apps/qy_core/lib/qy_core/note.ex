@@ -7,10 +7,11 @@ defmodule QyCore.Note do
   alias QyCore.Note
 
   # 选用不同的调式
-  # 十二平均律、纯律、五度相生律
+  # 十二平均律、五度相生律
+  # [TODO)[required discuss]
+  # 需要引入 Well-temp 吗？
   @type tuning_format ::
           :twelve_et
-          | :justoni
           | :pythagorean
 
   # 其他没有音高的音符
@@ -55,7 +56,7 @@ defmodule QyCore.Note do
   def note_to_text(:rest), do: "rest"
 
   @doc """
-  将音符从文本变成 `note()` 。
+  将音符从文本（科学音高记号）变成 `note()` 。
 
   ### Examples
 
@@ -230,7 +231,7 @@ defmodule QyCore.Note do
     do: format(note_1) |> do_format(:sharp) == format(note_2) |> do_format(:sharp)
 
   # 将音符转变为对应的频率
-  # @spec do_convert_note(note(), tuning_format(), note_and_frq()) :: float()
+  @spec do_convert_note(note(), tuning_format(), note_and_frq()) :: float()
   def do_convert_note(note, format \\ :twelve_et, base_note \\ {{:a, nil, 4}, 440.0})
 
   def do_convert_note(:rest, _, _), do: +0.0
@@ -240,6 +241,12 @@ defmodule QyCore.Note do
     base_pair
     |> octive_operate(note)
     |> Note.Distance.TwelveETAdapter.calculate_distance_pitch(note)
+  end
+
+  def do_convert_note(_note, :pythagorean, _base_pair) do
+    # base_pair |> octive_operate(note)
+    raise("Pythagorean calculation currently not implemented")
+    # |> Note.Distance.PythagoreanAdapter.calculate_distance_pitch(note)
   end
 
   def do_convert_note(_note, _format, _base_note), do: raise("Not Implemented")

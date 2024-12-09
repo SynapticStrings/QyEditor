@@ -10,6 +10,14 @@ defmodule QyCore.Phoneme do
 end
 
 defmodule QyCore.Phoneme.Backend do
-  # 音素适配器所适配的 protocol
-  # @type phoneme_databaze :: map() | module()
+  @moduledoc """
+  后续模块负责实现音素字典
+  """
+
+  defmacro __using__(_opts) do
+    # bla bla
+    quote do
+      # bla bla
+    end
+  end
 end

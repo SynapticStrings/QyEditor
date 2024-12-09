@@ -18,7 +18,7 @@ defmodule QyCore.Note.Distance do
 
   比方说一个八度里边 do 和 si 之间差七度，以及不同八度间 do 和 si 可能是二度、十五度。
   """
-  # 考虑形如 B3 与 C4 之类的情况
+  # [TODO) 考虑形如 B3 与 C4 之类的情况并完善测试代码
   def calulate_distance_sign({key1, _, octave1} = note1, {key2, _, octave2} = note2) do
     key_diff = calc_note_steps({key1, octave1}, {key2, octave2})
 
@@ -208,5 +208,41 @@ defmodule QyCore.Note.Distance.TwelveETAdapter do
     |> Distance.calc_note_steps(target_note)
     |> then(clac_scale_within_octave)
     |> Kernel.*(pitch_under_same_octave)
+  end
+end
+
+# 我不知道我有没有必要因为这么相近的音分去写很多的 Adapters
+# 反正 DiffSinger 的声码器是不在意那么细节的差异的
+
+defmodule QyCore.Note.Distance.PythagoreanAdapter do
+  alias QyCore.{Note.Distance}
+  @behaviour Distance
+
+  def calculate_distance_pitch(_base_note_and_pitch, _target_note) do
+    # 操作到一个八度
+    # 算他们之间间音的距离
+    # 往里套，在这里边就返回结果，不在就报错
+  end
+
+  # 这里不写死是因为可能基础音不是 C
+  def note_offset() do
+    # 对基准音：
+    # 频率乘 3/2 ，升纯五度（up 7 step）
+    # 频率乘 3/2 再减半，升纯五度再降八度（down 5 step）
+    # 频率乘 3/2 ，升纯五度（up 7 step）
+    # 频率乘 3/2 再减半，升纯五度再降八度（down 5 step）
+    # 频率乘 3/2 ，升纯五度（up 7 step）
+    # 对基准音：
+    # 频率除 3/2 再乘二，降纯五度再升八度（down 7 step）
+    %{
+      0 => 1,
+      2 => 9/8,
+      4 => 81/64,
+      5 => 4/3,
+      7 => 3/2,
+      9 => 27/16,
+      11 => 243/128,
+      12 => 2
+    }
   end
 end
