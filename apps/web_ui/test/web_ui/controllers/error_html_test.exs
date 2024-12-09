@@ -1,7 +1,7 @@
 defmodule WebUI.ErrorHTMLTest do
   use WebUI.ConnCase, async: true
 
-  # Bring render_to_string/4 for testing custom views
+  # 将 render_to_string/4 用于测试自定义试图
   import Phoenix.Template
 
   test "renders 404.html" do

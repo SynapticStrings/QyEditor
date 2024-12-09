@@ -1,8 +1,8 @@
 defmodule WebUI.PageHTML do
   @moduledoc """
-  This module contains pages rendered by PageController.
+  这个模块包括了将要被 PageController 渲染的页面。
 
-  See the `page_html` directory for all templates available.
+  可以通过 "page_html/" 目录来查看可用的模板。
   """
   use WebUI, :html
 

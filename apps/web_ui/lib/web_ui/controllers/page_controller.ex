@@ -2,8 +2,7 @@ defmodule WebUI.PageController do
   use WebUI, :controller
 
   def home(conn, _params) do
-    # The home page is often custom made,
-    # so skip the default app layout.
+    # 主页一般是定制的，所以跳过默认的应用布局。
     render(conn, :home, layout: false)
   end
 end

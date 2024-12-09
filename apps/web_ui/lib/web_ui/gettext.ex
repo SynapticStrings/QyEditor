@@ -1,24 +1,31 @@
 defmodule WebUI.Gettext do
   @moduledoc """
-  A module providing Internationalization with a gettext-based API.
+  提供基于 gettext API 的国际化模块。
 
-  By using [Gettext](https://hexdocs.pm/gettext),
-  your module gains a set of macros for translations, for example:
+  通过使用 [Gettext](https://hexdocs.pm/gettext)，
+  您的模块将获得一组用于翻译的宏，例如：
 
       use Gettext, backend: WebUI.Gettext
 
-      # Simple translation
+      # 单数
       gettext("Here is the string to translate")
 
-      # Plural translation
+      # 复数
       ngettext("Here is the string to translate",
                "Here are the strings to translate",
                3)
 
-      # Domain-based translation
+      # 基于域的翻译
       dgettext("errors", "Here is the error message to translate")
 
-  See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
+  详细用法请参见 [Gettext 文档](https://hexdocs.pm/gettext)。
   """
   use Gettext.Backend, otp_app: :web_ui
+
+  @doc """
+  返回默认语言。
+
+  当前是简体中文（`zh_CN`）。
+  """
+  def default_lang(), do: Gettext.get_locale(WebUI.Gettext)
 end

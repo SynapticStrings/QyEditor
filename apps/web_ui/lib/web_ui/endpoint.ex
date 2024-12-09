@@ -1,9 +1,9 @@
 defmodule WebUI.Endpoint do
+  # 关于 Endpoint 这个词的翻译，好像拿不准，就以「端点」来定了
   use Phoenix.Endpoint, otp_app: :web_ui
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
+  # Session 将在 cookie 中保存并被签名，这意味着它的内容可以被阅读
+  # 却无法被篡改。 如果你想要加密的话可以设置 :encryption_salt 。
   @session_options [
     store: :cookie,
     key: "_web_ui_key",
@@ -15,18 +15,16 @@ defmodule WebUI.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
-  # Serve at "/" the static files from "priv/static" directory.
+  # 将 "priv/static" 目录下的文件映射到 "/" 。
   #
-  # You should set gzip to true if you are running phx.digest
-  # when deploying your static files in production.
+  # 在生产环境下，如果你在运行 phx.digest 你应该把 gzip 设为真。
   plug Plug.Static,
     at: "/",
     from: :web_ui,
     gzip: false,
     only: WebUI.static_paths()
 
-  # Code reloading can be explicitly enabled under the
-  # :code_reloader configuration of your endpoint.
+  # 代码重载能够在你的端点的 :code_reloader 配置被显式地启用。
   if code_reloading? do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader

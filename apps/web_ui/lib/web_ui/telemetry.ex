@@ -1,4 +1,5 @@
 defmodule WebUI.Telemetry do
+  # 这玩意儿干啥的我还不知道嘞
   use Supervisor
   import Telemetry.Metrics
 
@@ -9,10 +10,10 @@ defmodule WebUI.Telemetry do
   @impl true
   def init(_arg) do
     children = [
-      # Telemetry poller will execute the given period measurements
-      # every 10_000ms. Learn more here: https://hexdocs.pm/telemetry_metrics
+      # 遥测轮询器（Telemetry poller）将每 10_000ms 执行一次给定周期的测量。
+      # 点击此处了解更多信息：https://hexdocs.pm/telemetry_metrics
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
-      # Add reporters as children of your supervision tree.
+      # 添加 reporters 作为监督树的子树。
       # {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
 
@@ -61,8 +62,8 @@ defmodule WebUI.Telemetry do
 
   defp periodic_measurements do
     [
-      # A module, function and arguments to be invoked periodically.
-      # This function must call :telemetry.execute/3 and a metric must be added above.
+      # 定期调用的模块、函数和参数。
+      # 该函数必须调用 :telemetry.execute/3，并且必须在上面添加一个度量值（metric）。
       # {WebUI, :count_users, []}
     ]
   end

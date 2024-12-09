@@ -1,23 +1,20 @@
 defmodule WebUI.ErrorHTML do
   @moduledoc """
-  This module is invoked by your endpoint in case of errors on HTML requests.
+  本模块被您的应用的端点在 HTML 请求出错时所调用。
 
-  See config/config.exs.
+  请看 config/config.exs 。
   """
   use WebUI, :html
 
-  # If you want to customize your error pages,
-  # uncomment the embed_templates/1 call below
-  # and add pages to the error directory:
+  # 如果要自定义错误页面，请取消下面的 embed_templates/1 调用，并在错误目录
+  # 中添加对应的页面：
   #
-  #   * lib//controllers/error_html/404.html.heex
-  #   * lib//controllers/error_html/500.html.heex
+  #   * lib/web_ui/controllers/error_html/404.html.heex
+  #   * lib/web_ui/controllers/error_html/500.html.heex
   #
   # embed_templates "error_html/*"
 
-  # The default is to render a plain text page based on
-  # the template name. For example, "404.html" becomes
-  # "Not Found".
+  # 默认情况是根据模板名称渲染纯文本页面。例如， "404.html" 会变成 "Not Found" 。
   def render(template, _assigns) do
     Phoenix.Controller.status_message_from_template(template)
   end

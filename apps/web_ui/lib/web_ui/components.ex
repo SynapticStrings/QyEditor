@@ -1,6 +1,7 @@
 defmodule WebUI.Components do
   @moduledoc false
 
+  # 通用的导入
   def common do
     quote do
       use Phoenix.Component
@@ -10,6 +11,7 @@ defmodule WebUI.Components do
     end
   end
 
+  # 等价于原来的 WebUI.CoreComponents
   def core do
     quote do
       import WebUI.{

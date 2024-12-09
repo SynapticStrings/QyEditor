@@ -1,20 +1,18 @@
 defmodule WebUI.ErrorJSON do
   @moduledoc """
-  This module is invoked by your endpoint in case of errors on JSON requests.
+  本模块被 JSON 请求出错时的端点所调用。
 
-  See config/config.exs.
+  请看 config/config.exs 。
   """
 
-  # If you want to customize a particular status code,
-  # you may add your own clauses, such as:
+  # 如果你想要定制化特定的状态码，你可以加上你自己的子句（Clause），比如：
   #
   # def render("500.json", _assigns) do
   #   %{errors: %{detail: "Internal Server Error"}}
   # end
 
-  # By default, Phoenix returns the status message from
-  # the template name. For example, "404.json" becomes
-  # "Not Found".
+  # 默认情况下， Phoenix 从模板名字返回状态信息。
+  # 比方说， "404.json" 会变成 "Not Found" 。
   def render(template, _assigns) do
     %{errors: %{detail: Phoenix.Controller.status_message_from_template(template)}}
   end

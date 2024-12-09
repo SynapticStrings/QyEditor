@@ -1,4 +1,4 @@
-// See the Tailwind configuration guide for advanced usage
+// 查阅进阶用法，请看 Tailwind 配置引导
 // https://tailwindcss.com/docs/configuration
 
 const plugin = require("tailwindcss/plugin")
@@ -20,8 +20,7 @@ module.exports = {
   },
   plugins: [
     require("@tailwindcss/forms"),
-    // Allows prefixing tailwind classes with LiveView classes to add rules
-    // only when LiveView classes are applied, for example:
+    // 允许使用 LiveView 类作为 tailwind 类的前缀，以便仅在应用 LiveView 类时添加规则，例如：
     //
     //     <div class="phx-click-loading:animate-ping">
     //
@@ -29,8 +28,8 @@ module.exports = {
     plugin(({addVariant}) => addVariant("phx-submit-loading", [".phx-submit-loading&", ".phx-submit-loading &"])),
     plugin(({addVariant}) => addVariant("phx-change-loading", [".phx-change-loading&", ".phx-change-loading &"])),
 
-    // Embeds Heroicons (https://heroicons.com) into your app.css bundle
-    // See your `CoreComponents.icon/1` for more information.
+    // 将 Heroicons (https://heroicons.com) 嵌入到你应用的 app.css 的打包里
+    // 欲获得更多信息，请查看 `NoctilucentWeb.ShowComponents.icon/1` 的文档。
     //
     plugin(function({matchComponents, theme}) {
       let iconsDir = path.join(__dirname, "../../../deps/heroicons/optimized")

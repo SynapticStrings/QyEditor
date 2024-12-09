@@ -17,9 +17,9 @@ defmodule WebUI.MixProject do
     ]
   end
 
-  # Configuration for the OTP application.
+  # 对 OTP 应用的配置
   #
-  # Type `mix help compile.app` for more information.
+  # 想要获得更多信息可输入 `mix help compile.app` 。
   def application do
     [
       mod: {WebUI.Application, []},
@@ -27,19 +27,19 @@ defmodule WebUI.MixProject do
     ]
   end
 
-  # Specifies which paths to compile per environment.
+  # 指定不同环境要编译的路径。
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Specifies your project dependencies.
+  # 项目依赖。
   #
-  # Type `mix help deps` for examples and options.
+  # 输入 `mix help deps` 可查看范例与选项。
   defp deps do
     [
       {:phoenix, "~> 1.7.14"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      # TODO bump on release to {:phoenix_live_view, "~> 1.0.0"},
+      # [TODO) 升级到 {:phoenix_live_view, "~> 1.0.0"}, （前提是更新到了）
       {:phoenix_live_view, "~> 1.0.0-rc.1", override: true},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
@@ -57,15 +57,15 @@ defmodule WebUI.MixProject do
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
-      # Model related
+      # 和模型相关
       {:diff_singer, in_umbrella: true},
-      # {:kino, "~> 0.14"},
+      {:qy_core, in_umbrella: true}
     ]
   end
 
-  # Aliases are shortcuts or tasks specific to the current project.
+  # 别名（Alias）是专门用于当前项目的快捷方式或任务。
   #
-  # See the documentation for `Mix` for more info on aliases.
+  # 有关别名的更多信息，请参阅 `Mix` 的文档。
   defp aliases do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
