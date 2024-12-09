@@ -14,6 +14,13 @@ import Config
 #       metadata: [:user_id]
 #
 
+## DiffSinger 部分
+
+config :diff_singer,
+  singer_repo: %{"Qixuan" => Path.join(File.cwd!(), "priv/Qixuan_v2.5.0_DiffSinger_OpenUtau")}
+
+## WebUI 部分
+
 config :web_ui,
   namespace: WebUI,
   generators: [context_app: false]

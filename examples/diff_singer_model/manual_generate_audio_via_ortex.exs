@@ -6,7 +6,7 @@
 
 join = fn sub -> Path.join(File.cwd!(), sub) end
 project_path = join.("priv/_project")
-model_path = join.("priv/Qixuan_v2.5.0_DiffSinger_OpenUtau")
+model_path = Application.compile_env(:diff_singer, :singer_repo)["Qixuan"]
 
 unless File.exists?(model_path), do:
   raise("Model doesn't exist! Please download and unzip at ...")
