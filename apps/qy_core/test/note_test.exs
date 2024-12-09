@@ -90,27 +90,46 @@ defmodule QyCore.NoteTest do
     test "一度、八度、十五度" do
       ## 纯一度
       # 一个音
-      assert Distance.calulate_distance_sign({:a, :natural, 4}, {:a, :natural, 4}) ==
+      assert Distance.calculate_distance_sign({:a, :natural, 4}, {:a, :natural, 4}) ==
                {:perfect, 1}
 
       # 同音异名（减二度）
-      assert Distance.calulate_distance_sign({:c, :sharp, 3}, {:d, :flat, 3}) ==
+      assert Distance.calculate_distance_sign({:c, :sharp, 3}, {:d, :flat, 3}) ==
                {:diminished, 2}
 
-      assert Distance.calulate_distance_sign({:c, :natural, 4}, {:b, :sharp, 3}) ==
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:b, :sharp, 3}) ==
                {:diminished, 2}
 
-      # 八度以及十五度、二十四度，甚至更多
-      assert Distance.calulate_distance_sign({:a, :natural, 4}, {:a, :natural, 3}) ==
+      # 八度以及十五度、二十二度，甚至更多
+      assert Distance.calculate_distance_sign({:a, :natural, 4}, {:a, :natural, 3}) ==
                {:perfect, 8}
+
+      assert Distance.calculate_distance_sign({:a, :natural, 2}, {:a, :natural, 4}) ==
+                {:perfect, 15}
+
+      assert Distance.calculate_distance_sign({:a, :natural, 5}, {:a, :natural, 2}) ==
+                {:perfect, 22}
+    end
+
+    test "二度" do
+      # 大二度
+      # 小二度
+    end
+
+    test "三度" do
+      # 大三度
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:e, :natural, 4}) == {:major, 3}
+
+      # 小三度
+      assert Distance.calculate_distance_sign({:d, :natural, 4}, {:f, :natural, 4}) == {:minor, 3}
     end
 
     test "纯四度" do
-      assert Distance.calulate_distance_sign({:c, :natural, 4}, {:f, :natural, 4}) == {:perfect, 4}
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:f, :natural, 4}) == {:perfect, 4}
     end
 
     test "纯五度" do
-      assert Distance.calulate_distance_sign({:c, :natural, 4}, {:g, :natural, 4}) == {:perfect, 5}
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:g, :natural, 4}) == {:perfect, 5}
     end
   end
 

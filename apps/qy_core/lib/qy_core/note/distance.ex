@@ -11,29 +11,21 @@ defmodule QyCore.Note.Distance do
 
   # 纯大小增减
   @type quality :: :perfect | :major | :minor | :augmented | :diminished
-  @type degree :: {quality(), number()}
+  @type degree :: {quality(), integer()}
 
   @doc """
   符号计算，【不返回正负】。
 
   比方说一个八度里边 do 和 si 之间差七度，以及不同八度间 do 和 si 可能是二度、十五度。
   """
-  # [TODO) 考虑形如 B3 与 C4 之类的情况并完善测试代码
-  def calulate_distance_sign({key1, _, octave1} = note1, {key2, _, octave2} = note2) do
+  def calculate_distance_sign({key1, _, octave1} = note1, {key2, _, octave2} = note2) do
     key_diff = calc_note_steps({key1, octave1}, {key2, octave2})
 
     {gap, over} =
       note1
       |> Note.format()
       |> calc_note_steps(note2 |> Note.format())
-      |> (fn x ->
-            cond do
-              x >= -12 and x < 0 -> {x + 12, 1}
-              0 <= x and x <= 12 -> {x, 0}
-              x > 12 and x <= 24 -> {x - 12, 1}
-              true -> {rem(x, 12), div(x, 12)}
-            end
-          end).()
+      |> then(fn x -> {rem(x, 12), div(x, 12) |> abs()} end)
 
     quanlity =
       gap
@@ -50,6 +42,10 @@ defmodule QyCore.Note.Distance do
               base_note_and_pitch :: Note.note_and_frq(),
               target_note :: Note.note()
             ) :: number()
+
+  # [TODO) 定义函数
+  # 运用 func = %{bla bla}; unquote(func) 之类的语句实现加速
+  # 可以用在 up_opt/1 down_opt/1 gap_to_interval/1 三个函数上
 
   # 上行音程
   def up_opt(source) when is_tuple(source) do
@@ -213,6 +209,7 @@ end
 
 # 我不知道我有没有必要因为这么相近的音分去写很多的 Adapters
 # 反正 DiffSinger 的声码器是不在意那么细节的差异的
+# 我也听不大出来其实
 
 defmodule QyCore.Note.Distance.PythagoreanAdapter do
   alias QyCore.{Note.Distance}
@@ -225,6 +222,7 @@ defmodule QyCore.Note.Distance.PythagoreanAdapter do
     # 操作到一个八度
     # 算他们之间间音的距离
     # 往里套，在这里边就返回结果，不在就报错
+    raise("Not implenented yet!")
   end
 
   # 这里不写死是因为可能基础音不是 C
