@@ -27,10 +27,7 @@ defmodule QyCore.Note.Distance do
       |> calc_note_steps(note2 |> Note.format())
       |> then(fn x -> {rem(x, 12), div(x, 12) |> abs()} end)
 
-    quanlity =
-      gap
-      |> gap_to_interval()
-      |> Map.get(key_diff)
+    quanlity = get_quanlity(gap, key_diff)
 
     {quanlity, key_diff + over * 7}
   end
@@ -43,73 +40,69 @@ defmodule QyCore.Note.Distance do
               target_note :: Note.note()
             ) :: number()
 
-  # [TODO) 定义函数
-  # 运用 func = %{bla bla}; unquote(func) 之类的语句实现加速
-  # 可以用在 up_opt/1 down_opt/1 gap_to_interval/1 三个函数上
-
   # 上行音程
-  def up_opt(source) when is_tuple(source) do
-    case source do
-      {:c, :natural, i} -> {:c, :sharp, i}
-      {:c, :sharp, i} -> {:d, :natural, i}
-      {:d, :natural, i} -> {:d, :sharp, i}
-      {:d, :sharp, i} -> {:e, :natural, i}
-      {:e, :natural, i} -> {:f, :natural, i}
-      {:f, :natural, i} -> {:f, :sharp, i}
-      {:f, :sharp, i} -> {:g, :natural, i}
-      {:g, :natural, i} -> {:g, :sharp, i}
-      {:g, :sharp, i} -> {:a, :natural, i}
-      {:a, :natural, i} -> {:a, :sharp, i}
-      {:a, :sharp, i} -> {:b, :natural, i}
-      {:b, :natural, i} -> {:c, :natural, i + 1}
-      _ -> :invalid_note
-    end
-  end
+  singal_note_name_up_opt_map = %{
+    c: :d,
+    d: :e,
+    e: :f,
+    f: :g,
+    g: :a,
+    a: :b,
+    b: :c
+  }
 
-  def up_opt(source) when is_atom(source) do
-    case source do
-      :c -> :d
-      :d -> :e
-      :e -> :f
-      :f -> :g
-      :g -> :a
-      :a -> :b
-      :b -> :c
-      _ -> :invalid_note
-    end
+  for {from, to} <- singal_note_name_up_opt_map do
+    def up_opt(unquote(from)), do: unquote(to)
   end
+  def up_opt(source) when is_atom(source), do: :invalid_note
+
+  note_with_tuple_up_opt = %{
+    {:c, :natural} => {:c, :sharp},
+    {:c, :sharp} => {:d, :natural},
+    {:d, :natural} => {:d, :sharp},
+    {:d, :sharp} => {:e, :natural},
+    {:e, :natural} => {:f, :natural},
+    {:f, :natural} => {:f, :sharp},
+    {:f, :sharp} => {:g, :natural},
+    {:g, :natural} => {:g, :sharp},
+    {:g, :sharp} => {:a, :natural},
+    {:a, :natural} => {:a, :sharp},
+    {:a, :sharp} => {:b, :natural}
+  }
+  for {{from_key, from_var}, {to_key, to_var}} <- note_with_tuple_up_opt do
+    def up_opt({unquote(from_key), unquote(from_var), from_octave}), do:
+      {unquote(to_key), unquote(to_var), from_octave}
+  end
+  def up_opt({:b, :natural, i}), do: {:c, :natural, i + 1}
+  def up_opt(source) when is_tuple(source), do: :invalid_note
 
   # 下行音程
-  def down_opt(source) when is_tuple(source) do
-    case source do
-      {:c, :natural, i} -> {:b, :natural, i - 1}
-      {:b, :natural, i} -> {:b, :flat, i}
-      {:b, :flat, i} -> {:a, :natural, i}
-      {:a, :natural, i} -> {:a, :flat, i}
-      {:a, :flat, i} -> {:g, :natural, i}
-      {:g, :natural, i} -> {:g, :flat, i}
-      {:g, :flat, i} -> {:f, :natural, i}
-      {:f, :natural, i} -> {:e, :natural, i}
-      {:e, :natural, i} -> {:e, :flat, i}
-      {:e, :flat, i} -> {:d, :natural, i}
-      {:d, :natural, i} -> {:d, :flat, i}
-      {:d, :flat, i} -> {:c, :natural, i}
-      _ -> :invalide_note
-    end
+  singal_note_name_down_opt_map =
+    singal_note_name_up_opt_map
+    |> Enum.map(fn {k, v} -> {v, k} end)
+  for {from, to} <- singal_note_name_down_opt_map do
+    def down_opt(unquote(from)), do: unquote(to)
   end
-
-  def down_opt(source) when is_atom(source) do
-    case source do
-      :c -> :b
-      :b -> :a
-      :a -> :g
-      :g -> :f
-      :f -> :e
-      :e -> :d
-      :d -> :c
-      _ -> :invalid_note
-    end
+  def down_opt(source) when is_atom(source), do: :invalid_note
+  note_with_tuple_down_opt = %{
+    {:b, :natural} => {:b, :flat},
+    {:b, :flat} => {:a, :natural},
+    {:a, :natural} => {:a, :flat},
+    {:a, :flat} => {:g, :natural},
+    {:g, :natural} => {:g, :flat},
+    {:g, :flat} => {:f, :natural},
+    {:f, :natural} => {:e, :natural},
+    {:e, :natural} => {:e, :flat},
+    {:e, :flat} => {:d, :natural},
+    {:d, :natural} => {:d, :flat},
+    {:d, :flat} => {:c, :natural},
+  }
+  for {{from_key, from_var}, {to_key, to_var}} <- note_with_tuple_down_opt do
+    def down_opt({unquote(from_key), unquote(from_var), from_octave}), do:
+      {unquote(to_key), unquote(to_var), from_octave}
   end
+  def down_opt({:c, :natural, i}), do: {:b, :natural, i - 1}
+  def down_opt(source) when is_tuple(source), do: :invalid_note
 
   @spec calc_note_steps(
           base :: Note.note() | {Note.note_name(), pos_integer()},
@@ -155,36 +148,58 @@ defmodule QyCore.Note.Distance do
     end
   end
 
-  # 通过按键之间的距离（gap）
-  def gap_to_interval(gap) do
-    case gap do
-      # 纯一度
-      0 -> %{1 => :perfect, 2 => :diminished}
-      # 小二度
-      1 -> %{2 => :minor}
-      # 大二度、减三度
-      2 -> %{2 => :major, 3 => :diminished}
-      # 增二度、小三度
-      3 -> %{2 => :augmented, 3 => :minor}
-      # 减四度、大三度
-      4 -> %{3 => :major, 4 => :diminished}
-      # 增三度、纯四度
-      5 -> %{3 => :augmented, 4 => :perfect}
-      # 减四度、增五度
-      6 -> %{4 => :augmented, 5 => :diminished}
-      # 纯五度、减六度
-      7 -> %{5 => :perfect, 6 => :diminished}
-      # 增五度、小六度
-      8 -> %{5 => :augmented, 6 => :minor}
-      # 减七度、大六度
-      9 -> %{7 => :diminished, 6 => :major}
-      # 小七度、增六度
-      10 -> %{6 => :augmented, 7 => :minor}
-      # 大七度
-      11 -> %{7 => :major}
-      # 增七度、纯八度
-      12 -> %{7 => :augmented, 8 => :perfect}
-    end
+  quanlity_mapper = %{
+    # 纯一度
+    {0, 1} => :perfect,
+    # 减二度
+    {0, 2} => :diminished,
+    # 小二度
+    {1, 2} => :minor,
+    # 大二度
+    {2, 2} => :major,
+    # 小三度
+    {2, 3} => :minor,
+    # 增二度
+    {3, 2} => :diminished,
+    # 小三度
+    {3, 3} => :minor,
+    # 大三度
+    {4, 3} => :major,
+    # 减四度
+    {4, 4} => :diminished,
+    # 增三度
+    {5, 3} => :augmented,
+    # 纯四度
+    {5, 4} => :perfect,
+    # 减四度
+    {6, 4} => :augmented,
+    # 增五度
+    {6, 5} => :diminished,
+    # 纯五度
+    {7, 5} => :perfect,
+    # 减六度
+    {7, 6} => :diminished,
+    # 增五度
+    {8, 5} => :augmented,
+    # 小六度
+    {8, 6} => :minor,
+    # 减七度
+    {9, 7} => :diminished,
+    # 大六度
+    {9, 6} => :major,
+    # 增六度
+    {10, 6} => :augmented,
+    # 小七度
+    {10, 7} => :minor,
+    # 大七度
+    {11, 7} => :major,
+    # 增七度
+    {12, 7} => :augmented,
+    # 纯八度
+    {12, 8} => :perfect,
+  }
+  for {{gap, key_diff}, quanlity} <- quanlity_mapper do
+    def get_quanlity(unquote(gap), unquote(key_diff)), do: unquote(quanlity)
   end
 end
 
