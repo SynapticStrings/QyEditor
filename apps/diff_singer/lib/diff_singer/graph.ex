@@ -24,32 +24,7 @@ defmodule DiffSinger.Graph do
 
   计划最后与 `DiffSinger.Port.Serving` 对接的就是这类模块或是其进一步抽象。
   """
-  alias DiffSinger.Graph
   # use :digraph
-
-  @type t :: %__MODULE__{
-    config: any(),
-    nodes: %{atom() => any()},
-    edges: [any()],
-    ports: [any()],
-  }
-  defstruct [:config, :nodes, :edges, :ports]
-
-  @doc """
-  创建一个空白的 `Graph` 。
-  """
-  def blank(), do: %__MODULE__{
-    config: %{graph: :digraph.new()},
-    nodes: %{},
-    edges: [],
-    ports: []
-  }
-
-  def add_node(graph = %__MODULE__{}, %Graph.Node{name: node_name} = new_node) do
-    # Add node validation.
-    # Add build edges.
-    %{graph | nodes: %{graph.nodes | node_name => new_node}}
-  end
 
   # def add_edge(graph = %__MODULE__{})
 
