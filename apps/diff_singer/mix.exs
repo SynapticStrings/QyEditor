@@ -2,8 +2,6 @@ defmodule DiffSinger.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  # TODO:
-  # Add version of DiffSinger.
 
   def project do
     [
