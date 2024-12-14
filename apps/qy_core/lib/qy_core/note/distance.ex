@@ -55,7 +55,7 @@ defmodule QyCore.Note.Distance do
     def up_opt(unquote(from)), do: unquote(to)
   end
 
-  def up_opt(source) when is_atom(source), do: :invalid_note
+  # def up_opt(source) when is_atom(source), do: :invalid_note
 
   note_with_tuple_up_opt = %{
     {:c, :natural} => {:c, :sharp},
@@ -77,7 +77,7 @@ defmodule QyCore.Note.Distance do
   end
 
   def up_opt({:b, :natural, i}), do: {:c, :natural, i + 1}
-  def up_opt(source) when is_tuple(source), do: :invalid_note
+  # def up_opt(source) when is_tuple(source), do: :invalid_note
 
   # 下行音程
   singal_note_name_down_opt_map =
@@ -88,7 +88,7 @@ defmodule QyCore.Note.Distance do
     def down_opt(unquote(from)), do: unquote(to)
   end
 
-  def down_opt(source) when is_atom(source), do: :invalid_note
+  # def down_opt(source) when is_atom(source), do: :invalid_note
 
   note_with_tuple_down_opt = %{
     {:b, :natural} => {:b, :flat},
@@ -110,7 +110,7 @@ defmodule QyCore.Note.Distance do
   end
 
   def down_opt({:c, :natural, i}), do: {:b, :natural, i - 1}
-  def down_opt(source) when is_tuple(source), do: :invalid_note
+  # def down_opt(source) when is_tuple(source), do: :invalid_note
 
   @spec calc_note_steps(
           base :: Note.note() | {Note.note_name(), pos_integer()},

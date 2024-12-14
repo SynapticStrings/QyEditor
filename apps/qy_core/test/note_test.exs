@@ -23,6 +23,16 @@ defmodule QyCore.NoteTest do
     end
   end
 
+  describe "将内在类型转变为 SPN" do
+    test "合法类型" do
+      assert Note.note_to_text(:rest) == "rest"
+
+      assert Note.note_to_text({:c, :natual, 2}) == "C2"
+
+      assert Note.note_to_text({:b, :flat, 3}) == "Bb3"
+    end
+  end
+
   describe "整理音符" do
     test "处理重升重降" do
       assert "C##4" |> Note.parse_spn() |> Note.format() == {:d, :natural, 4}
@@ -54,6 +64,10 @@ defmodule QyCore.NoteTest do
 
     test "同名异音" do
       assert {:c, :sharp, 3} |> Note.format(preference: :sharp) == {:c, :sharp, 3}
+    end
+
+    test "八度操作" do
+      #
     end
   end
 
@@ -150,9 +164,9 @@ defmodule QyCore.NoteTest do
   end
 
   describe "十二平均律下的音高计算" do
-    alias Distance.TwelveETAdapter, as: TET
+    test "TwelveETAdapter" do
+      alias Distance.TwelveETAdapter, as: TET
 
-    test "国际标准音高" do
       base = {{:a, :natural, 4}, 440.0}
 
       assert_in_delta TET.calculate_distance_pitch(base, {:a, :natural, 4}), 440.0, 0.01
@@ -164,7 +178,18 @@ defmodule QyCore.NoteTest do
 
     # 加管弦乐曲式的音高（A4 = 442 Hz）吗？
 
-    test "", do: nil
+    test "在 Note 模块中" do
+      # 休止符
+      assert_in_delta Note.do_convert_note(:rest), 0.0, 0.01
+
+      assert_in_delta Note.do_convert_note({:a, :natural, 4}), 440.0, 0.01
+
+      assert_in_delta Note.do_convert_note({:a, :natural, 2}), 110.0, 0.01
+
+      assert_in_delta Note.do_convert_note({:b, :natural, 7}), 3951.1, 0.1
+
+      # assert Note.do_convert_note(:invalid_name)
+    end
 
     # bla bla
   end

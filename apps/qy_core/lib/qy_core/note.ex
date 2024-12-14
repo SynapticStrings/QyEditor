@@ -50,7 +50,7 @@ defmodule QyCore.Note do
   @spec note_to_text(note()) :: binary()
   def note_to_text({key, var, octave}) do
     Map.get(@note_convert_to_text, key) <>
-      Map.get(@var_convertor_to_text, var) <> Integer.to_string(octave)
+      Map.get(@var_convertor_to_text, var, "") <> Integer.to_string(octave)
   end
 
   def note_to_text(:rest), do: "rest"
@@ -170,7 +170,7 @@ defmodule QyCore.Note do
       key in [:d, :e, :g, :a, :b] -> note
       key == :f -> {:e, :natural, octave}
       key == :c -> {:b, :natural, octave - 1}
-      true -> :invalid_note
+      # true -> :invalid_note
     end
   end
 
@@ -189,7 +189,7 @@ defmodule QyCore.Note do
       key in [:c, :d, :e, :g, :a] -> {key |> Note.Distance.up_opt(), :natural, octave}
       key == :e -> {:f, :natural, octave}
       key == :b -> {:c, :natural, octave + 1}
-      true -> :invalid_note
+      # true -> :invalid_note
     end
   end
 
@@ -203,10 +203,6 @@ defmodule QyCore.Note do
   比较两个音符的高低。
   """
   @spec higher?(note_1 :: note(), note_2 :: note()) :: boolean()
-  def higher?(note_1, note_2) when is_atom(note_1) do
-    Keyword.fetch!(@compare_note_list, note_1) > Keyword.fetch!(@compare_note_list, note_2)
-  end
-
   def higher?(note1, note2) do
     do_higher?(
       note1 |> format() |> do_format(:sharp),
@@ -234,14 +230,14 @@ defmodule QyCore.Note do
 
   # 将音符转变为对应的频率
   @spec do_convert_note(note :: note(), format :: tuning_format(), base_note :: note_and_frq()) :: float()
-  def do_convert_note(note, format \\ :twelve_et, base_note \\ {{:a, nil, 4}, 440.0})
+  def do_convert_note(note, format \\ :twelve_et, base_note \\ {{:a, :natural, 4}, 440.0})
 
   def do_convert_note(:rest, _, _), do: +0.0
 
   def do_convert_note(note, :twelve_et, base_pair) do
     # If it is too slowly, please use NIF.
     base_pair
-    |> octive_operate(note)
+    |> octive_operate(note) |> IO.inspect()
     |> Note.Distance.TwelveETAdapter.calculate_distance_pitch(note)
   end
 
