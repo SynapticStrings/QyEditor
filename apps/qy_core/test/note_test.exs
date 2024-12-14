@@ -113,6 +113,8 @@ defmodule QyCore.NoteTest do
 
     test "二度" do
       # 大二度
+      assert Distance.calculate_distance_sign({:c, :sharp, 3}, {:d, :sharp, 3}) == {:major, 2}
+
       # 小二度
     end
 
@@ -130,6 +132,20 @@ defmodule QyCore.NoteTest do
 
     test "纯五度" do
       assert Distance.calculate_distance_sign({:c, :natural, 4}, {:g, :natural, 4}) == {:perfect, 5}
+    end
+
+    test "六度" do
+      # 大六度
+
+      # 小六度
+    end
+
+    test "七度" do
+      # 大七度
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:b, :natural, 4}) == {:major, 7}
+
+      # 小七度
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:b, :flat, 4}) == {:minor, 7}
     end
   end
 

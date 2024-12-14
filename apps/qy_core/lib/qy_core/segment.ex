@@ -19,6 +19,6 @@ defmodule QyCore.Segment do
   ]
 
   ## 雷同逻辑
-  # 简单来说有两类修改：需要调用模型得到新结果和不需要，其需要不同的情景
+  # 简单来说有两类修改：需要调用模型得到新结果和不需要，其引发了不同的情景
   # def diff?(segment1, segment2, opts \\ [])
 end

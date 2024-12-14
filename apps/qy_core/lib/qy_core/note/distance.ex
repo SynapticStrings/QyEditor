@@ -54,6 +54,7 @@ defmodule QyCore.Note.Distance do
   for {from, to} <- singal_note_name_up_opt_map do
     def up_opt(unquote(from)), do: unquote(to)
   end
+
   def up_opt(source) when is_atom(source), do: :invalid_note
 
   note_with_tuple_up_opt = %{
@@ -69,10 +70,12 @@ defmodule QyCore.Note.Distance do
     {:a, :natural} => {:a, :sharp},
     {:a, :sharp} => {:b, :natural}
   }
+
   for {{from_key, from_var}, {to_key, to_var}} <- note_with_tuple_up_opt do
-    def up_opt({unquote(from_key), unquote(from_var), from_octave}), do:
-      {unquote(to_key), unquote(to_var), from_octave}
+    def up_opt({unquote(from_key), unquote(from_var), from_octave}),
+      do: {unquote(to_key), unquote(to_var), from_octave}
   end
+
   def up_opt({:b, :natural, i}), do: {:c, :natural, i + 1}
   def up_opt(source) when is_tuple(source), do: :invalid_note
 
@@ -80,10 +83,13 @@ defmodule QyCore.Note.Distance do
   singal_note_name_down_opt_map =
     singal_note_name_up_opt_map
     |> Enum.map(fn {k, v} -> {v, k} end)
+
   for {from, to} <- singal_note_name_down_opt_map do
     def down_opt(unquote(from)), do: unquote(to)
   end
+
   def down_opt(source) when is_atom(source), do: :invalid_note
+
   note_with_tuple_down_opt = %{
     {:b, :natural} => {:b, :flat},
     {:b, :flat} => {:a, :natural},
@@ -95,12 +101,14 @@ defmodule QyCore.Note.Distance do
     {:e, :natural} => {:e, :flat},
     {:e, :flat} => {:d, :natural},
     {:d, :natural} => {:d, :flat},
-    {:d, :flat} => {:c, :natural},
+    {:d, :flat} => {:c, :natural}
   }
+
   for {{from_key, from_var}, {to_key, to_var}} <- note_with_tuple_down_opt do
-    def down_opt({unquote(from_key), unquote(from_var), from_octave}), do:
-      {unquote(to_key), unquote(to_var), from_octave}
+    def down_opt({unquote(from_key), unquote(from_var), from_octave}),
+      do: {unquote(to_key), unquote(to_var), from_octave}
   end
+
   def down_opt({:c, :natural, i}), do: {:b, :natural, i - 1}
   def down_opt(source) when is_tuple(source), do: :invalid_note
 
@@ -196,8 +204,9 @@ defmodule QyCore.Note.Distance do
     # 增七度
     {12, 7} => :augmented,
     # 纯八度
-    {12, 8} => :perfect,
+    {12, 8} => :perfect
   }
+
   for {{gap, key_diff}, quanlity} <- quanlity_mapper do
     def get_quanlity(unquote(gap), unquote(key_diff)), do: unquote(quanlity)
   end
@@ -252,12 +261,12 @@ defmodule QyCore.Note.Distance.PythagoreanAdapter do
     # 频率除 3/2 再乘二，降纯五度再升八度（down 7 step）
     %{
       0 => 1,
-      2 => 9/8,
-      4 => 81/64,
-      5 => 4/3,
-      7 => 3/2,
-      9 => 27/16,
-      11 => 243/128,
+      2 => 9 / 8,
+      4 => 81 / 64,
+      5 => 4 / 3,
+      7 => 3 / 2,
+      9 => 27 / 16,
+      11 => 243 / 128,
       12 => 2
     }
   end

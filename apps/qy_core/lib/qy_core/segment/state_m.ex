@@ -60,8 +60,8 @@ defmodule QyCore.Segment.StateM do
   alias :gen_statem, as: GenStateM
   @behaviour GenStateM
 
-  # @states [:required_update, :do_update, :idle]
-  # @actions [:update_segment, :update_result, :opt_segment, :done]
+  # @states []
+  # @actions []
 
   ## Mode
 

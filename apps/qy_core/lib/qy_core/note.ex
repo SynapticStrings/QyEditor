@@ -65,7 +65,7 @@ defmodule QyCore.Note do
       iex> QyCore.Note.parse_spn("A4")
       {:a, :natural, 4}
   """
-  @spec parse_spn(raw :: <<_::16, _::_*8>>) :: note()
+  @spec parse_spn(raw_note_or_rest :: <<_::16, _::_*8>>) :: note()
   def parse_spn("rest"), do: :rest
 
   def parse_spn(<<note::binary-size(1), octave::binary-size(1)>>),
@@ -103,6 +103,8 @@ defmodule QyCore.Note do
 
   例如 C## -> D 或是 Fbb -> D# 。
 
+  `opts` 中的 `preference` 选项是偏好的调整范围
+
   ## Examples
 
       iex> QyCore.Note.format({:c, :ss, 4})
@@ -121,11 +123,11 @@ defmodule QyCore.Note do
     # 将包含 ff/bb 的情况处理掉
     res =
       case var do
-        :ff -> do_format(note, :flat)
         :ss -> do_format(note, :sharp)
         :sharp -> do_format(note, :sharp)
-        :flat -> do_format(note, :flat)
         :natural -> note
+        :flat -> do_format(note, :flat)
+        :ff -> do_format(note, :flat)
       end
 
     case prefer do
@@ -226,12 +228,12 @@ defmodule QyCore.Note do
     Keyword.fetch!(@compare_var_list, var_1) > Keyword.fetch!(@compare_var_list, var_2)
   end
 
-  @spec same?(note(), note()) :: boolean()
+  @spec same?(note_1 :: note(), note_2 :: note()) :: boolean()
   def same?(note_1, note_2),
     do: format(note_1) |> do_format(:sharp) == format(note_2) |> do_format(:sharp)
 
   # 将音符转变为对应的频率
-  @spec do_convert_note(note(), tuning_format(), note_and_frq()) :: float()
+  @spec do_convert_note(note :: note(), format :: tuning_format(), base_note :: note_and_frq()) :: float()
   def do_convert_note(note, format \\ :twelve_et, base_note \\ {{:a, nil, 4}, 440.0})
 
   def do_convert_note(:rest, _, _), do: +0.0
@@ -258,7 +260,7 @@ defmodule QyCore.Note do
   该函数会根据基音与目标音的八度差异，递归地将基音的八度逐步调整至目标音的八度范围内；
   如果基音和目标音的八度相同，则返回原始值。
   """
-  @spec octive_operate(note_and_frq(), note()) :: note_and_frq()
+  @spec octive_operate(base_note_and_pitch :: note_and_frq(), target_note :: note()) :: note_and_frq()
   def octive_operate(_, {:invalid, _, _}), do: {:error, :invalid_note}
 
   def octive_operate({{:invalid, _, _}, _}, _), do: {:error, :invalid_note}
