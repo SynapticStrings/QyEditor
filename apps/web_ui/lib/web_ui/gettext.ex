@@ -25,7 +25,7 @@ defmodule WebUI.Gettext do
   @doc """
   返回默认语言。
 
-  当前是简体中文（`zh_CN`）。
+  当前是简体中文（`zh_CN`），后面可能会写一个相关的 Plug 或模块来读取。
   """
   def default_lang(), do: Gettext.get_locale(WebUI.Gettext)
 end

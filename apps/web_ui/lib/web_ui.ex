@@ -73,6 +73,8 @@ defmodule WebUI do
       import Phoenix.Controller,
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
+      import WebUI.Gettext, only: [default_lang: 0]
+
       # 导入渲染 HTML 时常用的帮助模块/函数
       unquote(html_helpers())
     end
