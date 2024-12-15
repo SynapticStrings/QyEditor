@@ -4,9 +4,7 @@ defmodule QyCore.Params.BezierCurve do
   """
   # 此模块深度参考了 http://www.whudj.cn/?p=384
 
-  @typedoc """
-  点的坐标。
-  """
+  @typedoc "点的坐标。"
   @type location :: {number(), number()}
 
   @doc """
