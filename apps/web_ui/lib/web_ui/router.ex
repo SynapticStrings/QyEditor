@@ -41,4 +41,12 @@ defmodule WebUI.Router do
       live_dashboard "/dashboard", metrics: WebUI.Telemetry
     end
   end
+
+  # 用于开发以及测试
+  unless Mix.env() == :prod do
+    scope "/dev", WebUI do
+      # 用于在网页端单独展示组件
+      get "/components", PageController, :component_present
+    end
+  end
 end
