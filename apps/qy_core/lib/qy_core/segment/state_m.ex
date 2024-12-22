@@ -73,11 +73,11 @@ defmodule QyCore.Segment.StateM do
   ## Public API
 
   def start(_args) do
-    GenStateM.start(:name, __MODULE__, {}, [])
+    # GenStateM.start(:name, __MODULE__, {}, [])
   end
 
   def start_link(_args) do
-    GenStateM.start_link(:name, __MODULE__, {}, [])
+    # GenStateM.start_link(:name, __MODULE__, {}, [])
   end
 
   # def stop()

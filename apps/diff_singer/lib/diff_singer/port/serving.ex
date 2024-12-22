@@ -21,11 +21,18 @@ defmodule DiffSinger.Port.Serving do
   """
   @behaviour Nx.Serving
 
-  def init(_type, _arg, [_defn_options]) do
-    # 总得返回个东西回来
-    {:ok, fn _ -> nil end}
-  end
+  # def init(_type, _arg, [_defn_options]) do
+  #   # 总得返回个东西回来
+  #   {:ok, fn _ -> nil end}
+  # end
 
-  def handle_batch(_arg0, _partition, _state) do
-  end
+  # def handle_batch(_arg0, _partition, state) do
+  #   {:execute, fn -> {:execute, nil} end, state}
+  # end
+
+  @impl true
+  defdelegate init(inline_or_process, model, defn_options), to: Ortex.Serving
+
+  @impl true
+  defdelegate handle_batch(batch, partition, function), to: Ortex.Serving
 end
