@@ -34,11 +34,9 @@ defmodule QyCore.Params do
 
   ## 类型
 
-  @typedoc """
-  参数的类型：一个是时间序列（依赖于 `timestamp`）；
-  另一个是元素序列（比方说音素的某某参数）
-  """
+  @typedoc "参数的类型一个是时间序列（依赖于 `timestamp`）；另一个是元素序列（比方说音素的某某参数）"
   @type param_type :: :time_seq | :element_seq
+  @typedoc "具体的参数名字"
   @type param_name :: atom()
 
   def time_seq?(%__MODULE__{type: {:time_seq, _}}), do: true

@@ -5,7 +5,7 @@ defmodule QyCore.Params.BezierCurve do
   # 此模块深度参考了 http://www.whudj.cn/?p=384
 
   @typedoc "点的坐标。"
-  @type location :: {number(), number()}
+  @type point_location :: {number(), number()}
 
   @doc """
   根据控制点绘制曲线。
@@ -15,7 +15,7 @@ defmodule QyCore.Params.BezierCurve do
   - `points` 控制点的坐标
   - `step` 每次迭代所走的步数，大于零小于一的浮点数，其倒数【一般】是点的数目
   """
-  @spec draw(control_points :: list(location()), step :: float()) :: list(location())
+  @spec draw(control_points :: list(point_location()), step :: float()) :: list(point_location())
   defdelegate draw(points, step), to: QyCore.Params.BezierCurve.Drawer
 
   # 从曲线本身反推控制点
@@ -23,7 +23,7 @@ defmodule QyCore.Params.BezierCurve do
 
   # 不更换曲线的情况下增加控制点（升阶）
   # http://www.whudj.cn/?p=445
-  @spec degree_elevation(old_control_points :: list(location()), non_neg_integer()) :: list(location())
+  @spec degree_elevation(old_control_points :: list(point_location()), non_neg_integer()) :: list(point_location())
   def degree_elevation(points, _append_point_num), do: points
 
   # 尽量不修改曲线参数的情况下精简控制点

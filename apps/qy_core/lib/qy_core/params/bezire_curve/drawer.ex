@@ -4,7 +4,7 @@ defmodule QyCore.Params.BezierCurve.Drawer do
 
   # 这个函数抄的 https://developer.aliyun.com/article/678181
   # 有了不少魔改
-  @spec draw(list(BezierCurve.location()), float()) :: list(BezierCurve.location())
+  @spec draw(list(BezierCurve.point_location()), float()) :: list(BezierCurve.point_location())
   def draw(control_points, _step) when length(control_points) == 1 do
     control_points
   end

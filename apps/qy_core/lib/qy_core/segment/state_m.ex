@@ -9,9 +9,10 @@ defmodule QyCore.Segment.StateM do
   `{{current_state, inference_result}, tools_func, maybe_new_state_and_input}`
 
   * `{current_state, inference_result}` 状态与输出的对应，弄成这个元组是因为可能在别的地方用到
-    - 最最开始一般就是 `{nil, nil}`
+    - 最开始一般就是 `{%QyCore.Segment{id: :segment_id}, nil}`
   * `tools_func` 工具函数（例如准备推理以及推理）
   * `maybe_new_state_and_input` 可能是新状态，有模型的输入时还包括着对应的输入或上下文
+    - 最开始就是准备要推理出结果的输入
 
   ### 工具函数
 
@@ -56,12 +57,23 @@ defmodule QyCore.Segment.StateM do
   #   - 一类是确保用户输入的合法性；还有一类是在下游应用写出错误的代码时可以抛出错误
   # - 出现错误是要怎么处理？回滚并且保留相关数据？
 
+  alias QyCore.Segment
+
   # 看上去更符合 Elixir 的命名
   alias :gen_statem, as: GenStateM
   @behaviour GenStateM
 
-  # @states []
-  # @actions []
+  @typedoc "状态机进程的名字和片段的名字保持一致，一一对应"
+  @type id :: Segment.id()
+
+  @typedoc "状态机的状态"
+  @type states :: :idle | :required_update | :do_update
+
+  @typedoc "状态机的状态变化"
+  @type actions :: :update_segment | :opt_segment | :update_result | :done
+
+  @typedoc "状态机保存的所有内容"
+  @type data :: {states(), Segment.segment_and_result(), keyword(function()), nil | Segment.t() | any()}
 
   ## Mode
 
@@ -120,4 +132,8 @@ defmodule QyCore.Segment.StateM do
   ## Helpers
 
   def get_id(%QyCore.Segment{id: id}), do: id
+
+  def perparing_initial(_any) do
+    {nil, nil}
+  end
 end
