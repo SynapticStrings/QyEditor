@@ -1,10 +1,27 @@
 defmodule QyCore.Segment.StateM do
+  # 参考资料
+  # https://www.erlang.org/doc/system/statem.html
   @moduledoc """
   对片段状态的管理。
 
   简单来说就是为了更直观地展示片段的状态（）。
 
+  ## 总览
+
+  为了确保片段能够实行增量式的渲染（输入变化时，只重新计算受影响的内容），
+  故该负责片段状态管理的模块基于状态机设计。
+
+  简单来说以下几步：
+
+  1. 输入更新时挂起，等待推理模型可用
+  2. 等待推理的结果
+  3. 得到结果后更新片段的状态
+
+  如果其中存在出错可能还会进行简单的错误处理。
+
   ## 数据本体
+
+  数据等同于状态机包含的所有数据，主要是：
 
   `{{current_state, inference_result}, tools_func, maybe_new_state_and_input}`
 
@@ -18,10 +35,16 @@ defmodule QyCore.Segment.StateM do
 
   主要负责检查、准备模型可用的输入、调用模型、错误处理等方面。
 
-  * `validate`
-  * `prepare`
-  * `invoke`
-  * `error_handler`
+  * `validate/1`
+    - 检查数据是否合法
+    - 返回格式 `{:ok, data}` 或者 `{:error, reason}`
+  * `prepare/1`
+    - 准备输入（将片段变成模型的输入）
+  * `invoke/1`
+    - 调用推理模型
+  * `error_handler/2`
+    - 输入 `{:error, reason}, context`
+    - 决定结束 StateM 还是其他
 
   ## 状态变化
 
@@ -81,6 +104,7 @@ defmodule QyCore.Segment.StateM do
   def callback_mode(), do:
     # 简单来说就是把状态名当成函数
     :state_functions
+    # :handle_event_function
 
   ## Public API
 
@@ -94,6 +118,12 @@ defmodule QyCore.Segment.StateM do
 
   # def stop()
 
+  # def get_segment()
+
+  # def get_result()
+
+  # def done?()
+
   ## Callbacks
 
   @impl true
@@ -105,14 +135,14 @@ defmodule QyCore.Segment.StateM do
   def idle(:update_segment) do
     # ...
 
-    {:next_state, :required_update}
+    {:next_state, :required_update, :new_segment}
   end
 
   # 简单更新数据
   def idle(:opt_segment) do
     # ...
 
-    {:keep_state, nil}
+    {:keep_state, :NewSegment}
   end
 
   # 调用模型，等待结果
@@ -126,8 +156,30 @@ defmodule QyCore.Segment.StateM do
   def do_update(:done) do
     # ...
 
-    {:next_state, :idle}
+    {:next_state, :idle, :newSegmentAndResult}
   end
+
+  # 模型出错
+  def do_update({:error, :reason}) do
+    # ...
+
+    # [TODO) Action 改成 stop
+    # {:next_state, :idle, nil}
+  end
+
+  # TODO: impl terminate/3
+  # 包括出现不可逆错误时停止
+  # 以及正常结束时的清理工作
+
+  ## Inner API
+
+  # defp apply_validate(data) do
+
+  # defp apply_prepare(data) do
+
+  # defp apply_invoke(data) do
+
+  # defp handle_error(data) do
 
   ## Helpers
 
@@ -135,5 +187,9 @@ defmodule QyCore.Segment.StateM do
 
   def perparing_initial(_any) do
     {nil, nil}
+  end
+
+  def get_func_from_data(_data, _role) do
+    # ...
   end
 end
