@@ -13,6 +13,7 @@ defmodule QyCore.Note.Distance do
   @type quality :: :perfect | :major | :minor | :augmented | :diminished
   @type degree :: {quality(), integer()}
 
+  @spec calculate_distance_sign(Note.note(), Note.note()) :: degree()
   @doc """
   符号计算，【不返回正负】。
 
@@ -117,6 +118,9 @@ defmodule QyCore.Note.Distance do
           target :: Note.note() | {Note.note_name(), pos_integer()},
           idx :: integer()
         ) :: integer()
+  @doc """
+  计算音符之间的半音数目。
+  """
   def calc_note_steps(base, target, idx \\ 0)
 
   # 只用作比较音名，就是 xx 度
