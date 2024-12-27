@@ -26,35 +26,55 @@ defmodule QyCore.Segment.StateM do
   `{{current_state, inference_result}, tools_func, maybe_new_state_and_input}`
 
   * `{current_state, inference_result}` 状态与输出的对应，弄成这个元组是因为可能在别的地方用到
-    - 最开始一般就是 `{%QyCore.Segment{id: :segment_id}, nil}`
-  * `tools_func` 工具函数（例如准备推理以及推理）
+    - 最开始一般就是 `{nil, nil}`
+  * `tools_func` 工具函数（参见下面的「工具函数」一节）
   * `maybe_new_state_and_input` 可能是新状态，有模型的输入时还包括着对应的输入或上下文
     - 最开始就是准备要推理出结果的输入
+    - 如果输入输出对应，数据没有此片段（也就是元组只有两个元素）
 
   ### 工具函数
 
   主要负责检查、准备模型可用的输入、调用模型、错误处理等方面。
 
   * `validate/1`
-    - 检查数据是否合法
+    - 检查数据（片段）是否合法
     - 返回格式 `{:ok, data}` 或者 `{:error, reason}`
-  * `prepare/1`
-    - 准备输入（将片段变成模型的输入）
   * `invoke/1`
-    - 调用推理模型
+    - 调用推理模型，其接受【模型的】输入
   * `error_handler/2`
     - 输入 `{:error, reason}, context`
-    - 决定结束 StateM 还是其他
+    - 决定结束状态机并返回报错信息还是其他
+
+  ### 新状态上下文（`maybe_new_state_and_input`）
+
+  一般来说，新状态的数据是片段的数据，但是也可能是其他数据（主要是模型的输入/能够通过片段得到输入的函数）。
 
   ## 状态变化
+
+  ### 模型的状态
+
+  主要是以下三种情况：
+
+  * `:idle`
+  * `:required_update`
+  * `:do_update`
+
+  （需要考虑错误情况吗？）
+
+  ### 状态变化的情景
+
+  一般情景：
 
   * `:update_segment` 信息更新
     - 片段与输出不对应且需要通过模型推理获得新片段的结果时
     - 通过调用对应的工具函数来准备可以被推理模型使用的输入
     - 状态由 `:idle` 变为 `:required_update`
+    - `maybe_new_state_and_input` 为新片段
+      - 一般是 `{input, func/1}` 或者 `{input, nil}` ，其中后者的 `nil` 将会在准备推理时被 `model_input` 取代
+      - 其中 `model_input = func.(input)` ，`func` 是一个 arity 的函数，其通过片段得到输入
   * `:opt_segment` 不需要调用推理过程的更新
     - 比方说简单的拖拽时间
-    - 状态保持 `:idle` ，但是要更新片段
+    - 状态保持 `:idle` ，但是要更新片段，但也仅仅是更新了片段而已，不需要调用推理
   * `:update_result` 准备调用模型推理
     - 通过调用对应的工具函数来将片段的数据交由推理模型处理
     - `:required_update` -> `:do_update`
@@ -64,21 +84,20 @@ defmodule QyCore.Segment.StateM do
     - 比方说这个片段不再需要某某函数，或者是需要加上某某操作
     - 需要更多讨论
 
+  错误处理：
+
+  * `segment_invalid` 状态存在非法数据
+  * `inference_crash` 推理过程出现崩溃
+
   把 `:required_update` 和 `:do_update` 两个状态分开，
   主要是需要向用户展示工程中的这一片段是否更新到了。
 
   如果纯粹从性能角度来考虑的话， OpenVPI 官方的编辑器就很不错（）
 
-  ## 如何调用
+  ## 用法
 
-  用人话讲这段就是怎么把这个模块放到你的应用里，等基本上实现完了再填坑。
+  基于通过 `QyCore.Segment.Manager` 来管理。
   """
-  # 这玩意儿可比 Glowworm 里那个 Runner 简单多了
-  # [TODO)
-  # - validate
-  #   - 相关的代码交给对应的应用来写
-  #   - 一类是确保用户输入的合法性；还有一类是在下游应用写出错误的代码时可以抛出错误
-  # - 出现错误是要怎么处理？回滚并且保留相关数据？
 
   alias QyCore.Segment
 
@@ -92,19 +111,36 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机的状态"
   @type states :: :idle | :required_update | :do_update
 
+  @typedoc "一般情况下状态机的状态变化"
+  @type normal_actions :: :update_segment | :opt_segment | :update_result | :done
+
+  # TODO: when doc done.
+  # @typedoc "错误处理的有关状态"
+  # @type error_actions :: :segment_invalid | :inference_crash
+
   @typedoc "状态机的状态变化"
-  @type actions :: :update_segment | :opt_segment | :update_result | :done
+  @type actions :: normal_actions() # | error_actions()
+
+  @typedoc "新状态相关上下文"
+  @type maybe_new_state_and_input ::
+          {Segment.segment_and_result(), function() | any() | nil}
+
+  @typedoc "状态机的数据"
+  @type context ::
+          {Segment.segment_and_result(), keyword(function())}
+          | {Segment.segment_and_result(), keyword(function()),
+             maybe_new_state_and_input()}
 
   @typedoc "状态机保存的所有内容"
-  @type data :: {states(), Segment.segment_and_result(), keyword(function()), nil | Segment.t() | any()}
+  @type data :: {states(), context()}
 
   ## Mode
 
   @impl true
-  def callback_mode(), do:
+  def callback_mode(),
     # 简单来说就是把状态名当成函数
-    :state_functions
-    # :handle_event_function
+    do: :state_functions
+  # Or :handle_event_function
 
   ## Public API
 
@@ -118,17 +154,21 @@ defmodule QyCore.Segment.StateM do
 
   # def stop()
 
-  # def get_segment()
+  # def get_segment(id)
 
-  # def get_result()
+  # def get_result(id)
 
-  # def done?()
+  # def done?(id) do
+    # locale data
+    # |> check_done()
+  # end
 
   ## Callbacks
 
   @impl true
-  def init(_args) do
-    {:ok, :idle, nil}
+  def init(args) do
+    # Prepareing initial data
+    {:ok, :idle, perparing_initial(args)}
   end
 
   # 准备推理模型的输入
@@ -171,22 +211,24 @@ defmodule QyCore.Segment.StateM do
   # 包括出现不可逆错误时停止
   # 以及正常结束时的清理工作
 
-  ## Inner API
+  ## Inner API and Helpers
 
   # defp apply_validate(data) do
 
-  # defp apply_prepare(data) do
+  # defp apply_prepare({_, _, {segment, input_or_func}}) when is_function(input_or_func), do: input_or_func.(segment)
+  # defp apply_prepare({_, _, {_segment, input_or_func}}), do: input_or_func
 
   # defp apply_invoke(data) do
 
   # defp handle_error(data) do
 
-  ## Helpers
+  # defp check_done({_segment_and_result, _functions}), do: true
+  # defp check_done({_segment_and_result, _functions, _maybe_new_state_and_input}), do: false
 
   def get_id(%QyCore.Segment{id: id}), do: id
 
   def perparing_initial(_any) do
-    {nil, nil}
+    {{nil, nil}, [], nil}
   end
 
   def get_func_from_data(_data, _role) do
