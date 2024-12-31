@@ -109,6 +109,8 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机进程的名字和片段的名字保持一致，一一对应"
   @type segment_id :: Segment.id()
 
+  @type name :: {:global, {:segment, segment_id()}}
+
   @typedoc "状态机的状态"
   @type states :: :idle | :required_update | :do_update
 
@@ -127,13 +129,13 @@ defmodule QyCore.Segment.StateM do
           {Segment.segment_and_result(), function() | any() | nil}
 
   @typedoc "状态机的数据"
-  @type context ::
+  @type container ::
           {Segment.segment_and_result(), keyword(function())}
           | {Segment.segment_and_result(), keyword(function()),
              maybe_new_state_and_input()}
 
   @typedoc "状态机保存的所有内容"
-  @type data :: {states(), context()}
+  @type data :: {states(), container()}
 
   ## Mode
 
@@ -145,17 +147,24 @@ defmodule QyCore.Segment.StateM do
 
   ## Public API
 
-  def start(_args) do
-    # GenStateM.start(:name, __MODULE__, {}, [])
+  def start(init_segment) do
+    {name, container} = preparing_initial(init_segment)
+
+    GenStateM.start(name, __MODULE__, {container}, [])
   end
 
-  def start_link(_args) do
-    # GenStateM.start_link(:name, __MODULE__, {}, [])
+  def start_link(init_segment) do
+    {name, container} = preparing_initial(init_segment)
+
+    GenStateM.start_link(name, __MODULE__, {container}, [])
   end
 
-  # def stop()
+  def stop(segment_id) do
+    GenStateM.stop(name(segment_id))
+  end
 
-  # def get_segment(name(id))
+  # def get_segment(name(id)) do
+  # end
 
   # def get_result(name(id))
 
@@ -167,9 +176,8 @@ defmodule QyCore.Segment.StateM do
   ## Callbacks
 
   @impl true
-  def init(args) do
-    # Prepareing initial data
-    {:ok, :idle, perparing_initial(args)}
+  def init(container) do
+    {:ok, :idle, container}
   end
 
   # 准备推理模型的输入
@@ -226,12 +234,13 @@ defmodule QyCore.Segment.StateM do
   # defp check_done({_segment_and_result, _functions}), do: true
   # defp check_done({_segment_and_result, _functions, _maybe_new_state_and_input}), do: false
 
-  def get_id(%QyCore.Segment{id: id}), do: id
+  def get_id(%Segment{id: id}), do: id
 
-  def name(id), do: {:global, {__MODULE__, id}}
+  def name(id), do: {:global, {:segment, id}}
 
-  def perparing_initial(_any) do
-    {{nil, nil}, [], nil}
+  def preparing_initial(initial_segment = %Segment{id: segment_id}) do
+    # [TODO) prepare function tools.
+    {name(segment_id), {{nil, nil}, [], initial_segment}}
   end
 
   def get_func_from_data(_data, _role) do

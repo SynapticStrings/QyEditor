@@ -22,10 +22,23 @@ defmodule QyCore.Segment do
     :comments,
   ]
 
+  ## 创建 Segment
+
+  # def create/2
+
   ## 关于 ID
 
   def random_id() do
-    :crypto.strong_rand_bytes(32) |> Base.encode32(case: :lower)
+    # 创建的时间戳
+    timestamp = DateTime.utc_now() |> DateTime.to_unix() |> Integer.to_string() |> String.slice(0..9)
+    # 随机数
+    random = :crypto.strong_rand_bytes(16) |> Base.encode32(case: :lower)
+
+    timestamp <> random
+  end
+
+  def with_same_id?(segment1, segment2) do
+    segment1.id == segment2.id
   end
 
   ## 雷同逻辑
