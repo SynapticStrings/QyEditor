@@ -60,10 +60,11 @@ defmodule QyCore.BexierCurveTest do
 
     test "更高阶的曲线" do
       # 四阶
-      assert curve_passby_target(
-               BezierCurve.draw([{0, 0}, {1, 1}, {2, 1}, {3, 1}, {4, 0}], 0.01),
-               {2, 0.875}
-             )
+      forth_line = BezierCurve.draw([{0, 0}, {1, 1}, {2, 1}, {3, 1}, {4, 0}], 0.01)
+
+      assert curve_has_target(forth_line, {0, 0})
+      assert curve_passby_target(forth_line, {2, 0.875})
+      assert curve_has_target(forth_line, {4, 0})
     end
   end
 end

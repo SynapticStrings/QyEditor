@@ -16,7 +16,9 @@ defmodule QyCore.Params.BezierCurve do
   def shift(points_or_curve, {offset_x, offset_y} \\ {0.0, 0.0}), do:
     Enum.map(points_or_curve, fn {x, y} -> {x + offset_x, y + offset_y} end)
 
-  ## 绘图
+  ## 曲线 <--> 控制点
+
+  # 绘图
 
   @doc """
   根据控制点绘制曲线。
@@ -32,6 +34,8 @@ defmodule QyCore.Params.BezierCurve do
   # 从曲线本身反推控制点
   # https://jermmy.github.io/2016/08/01/2016-8-1-Bezier-Curve-SVG/
 
+  ## 控制点的增减
+
   # 不更换曲线的情况下增加控制点（升阶）
   # http://www.whudj.cn/?p=445
   @spec degree_elevation(old_control_points :: control_points(), non_neg_integer()) :: control_points()
@@ -39,11 +43,14 @@ defmodule QyCore.Params.BezierCurve do
 
   # 尽量不修改曲线参数的情况下精简控制点
 
-  # 一堆三次曲线 <--> 多次曲线
+  ## 三次曲线 <--> 多次曲线
+
   # 可能需要用到这一章
   # http://www.whudj.cn/?p=419
-  # def to_third_order(points)
-  # def from_third_order(points)
+
+  # def to_third_order(points = [_, _, _, _]), do: points
+
+  # def from_third_order(points = [_, _, _, _]), do: points
 
   # 从曲线到映射的参数（类似于 Cadencii 的功能）
   # 需要检查约束，然后依照时间步长把曲线的点变成序列
