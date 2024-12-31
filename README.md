@@ -16,10 +16,10 @@
 目前活跃的：
 
 - `qy_core` 应用本体
-- `diff_singer` Elixir 端调用 DiffSinger 的应用
 
 暂时不活跃的：
 
+- `diff_singer` Elixir 端调用 DiffSinger 的应用，装载 ONNX 报错且跨语言较难 debug
 - `scripts` 与现成的项目进行对接，不活跃是因为 DiffSinger 目前正在重构应用，很多内容并没有确定
 - `web_ui` 网络应用端，需要模型整体可行以及大量的前置知识
 

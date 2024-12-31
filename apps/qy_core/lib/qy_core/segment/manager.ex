@@ -6,4 +6,29 @@ defmodule QyCore.Segment.Manager do
   def init(_init_arg) do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
+
+  ## 管理器相关
+
+  # ...
+
+  ## 片段管理相关
+
+  # 用于创建一个新的 Segment
+  # def create
+
+  # 用于销毁一个已有的 Segment
+  # def terminate
+
+  # 合并两个 Segments
+  # def merge
+  # 有 overlap 或没有 overlap 或之间有新的 Segment
+
+  # 分割一个 Segment
+  # def split
+
+  # 将 Segment 持久化
+  # def persist
+
+  # 从持久化中恢复 Segment
+  # def restore
 end

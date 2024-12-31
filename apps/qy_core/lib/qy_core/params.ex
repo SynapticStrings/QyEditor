@@ -1,6 +1,15 @@
 defmodule QyCore.Params do
   @moduledoc """
   参数的设置。
+
+  目前 QyEditor 计划实现以下的参数（待思考完成后再对其共性进行整理进而确定该模块的业务范围）：
+
+  * 音符（MIDI-like）
+  * 音素
+    * 音素序列
+    * 音素时长 -> 音素序列 & 音符
+  * 音高曲线
+
   """
 
   # 参数的通用设置
@@ -24,6 +33,7 @@ defmodule QyCore.Params do
     # 首个参数的时长偏移量
     :sequence,
     # 参数序列
+    # 因为 Elixir 列表的实质，所以这里的序列是相反的，即 [last_element [... [first_element]]]
     :context,
     # 上下文
     # 比方说这个参数黏附的对象是某某句子，或是某某时间戳

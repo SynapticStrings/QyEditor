@@ -80,6 +80,7 @@ defmodule QyCore.Segment.StateM do
     - `:required_update` -> `:do_update`
   * `:done` 得到结果，固定新的（Segment 与输出）
     - `:do_update` -> `:idle`
+    - [TODO) 需要深入讨论可能会修改 Segment 本身的情况（例如音高参数，其既可以由模型生成，有可能被手动修改）
   * `:update_infer_graph` 模型更新
     - 比方说这个片段不再需要某某函数，或者是需要加上某某操作
     - 需要更多讨论
@@ -90,9 +91,9 @@ defmodule QyCore.Segment.StateM do
   * `inference_crash` 推理过程出现崩溃
 
   把 `:required_update` 和 `:do_update` 两个状态分开，
-  主要是需要向用户展示工程中的这一片段是否更新到了。
+  主要是需要向用户展示工程中的这一片段是否更新到了的情况。
 
-  如果纯粹从性能角度来考虑的话， OpenVPI 官方的编辑器就很不错（）
+  如果纯粹从性能角度来考虑的话， 使用 OpenUTAU 或是 OpenVPI 的编辑器就很不错（）
 
   ## 用法
 

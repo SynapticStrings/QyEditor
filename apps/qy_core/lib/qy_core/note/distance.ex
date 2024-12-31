@@ -4,14 +4,14 @@ defmodule QyCore.Note.Distance do
 
   重度参考了 [乐理计算器](https://guo-musickit.vercel.app/#/music/readme) 。
 
-  暂时不考虑超过十五度的范畴。
+  超过十五度的音报错暂时不管。
   """
 
   alias QyCore.Note
 
   # 纯大小增减
   @type quality :: :perfect | :major | :minor | :augmented | :diminished
-  @type degree :: {quality(), integer()}
+  @type degree :: {quality(), pos_integer()}
 
   @spec calculate_distance_sign(Note.note(), Note.note()) :: degree()
   @doc """
@@ -78,6 +78,7 @@ defmodule QyCore.Note.Distance do
   end
 
   def up_opt({:b, :natural, i}), do: {:c, :natural, i + 1}
+
   # def up_opt(source) when is_tuple(source), do: :invalid_note
 
   # 下行音程
@@ -111,6 +112,7 @@ defmodule QyCore.Note.Distance do
   end
 
   def down_opt({:c, :natural, i}), do: {:b, :natural, i - 1}
+
   # def down_opt(source) when is_tuple(source), do: :invalid_note
 
   @spec calc_note_steps(
