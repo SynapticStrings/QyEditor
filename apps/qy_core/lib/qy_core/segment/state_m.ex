@@ -107,7 +107,7 @@ defmodule QyCore.Segment.StateM do
   @behaviour GenStateM
 
   @typedoc "状态机进程的名字和片段的名字保持一致，一一对应"
-  @type id :: Segment.id()
+  @type segment_id :: Segment.id()
 
   @typedoc "状态机的状态"
   @type states :: :idle | :required_update | :do_update
@@ -155,11 +155,11 @@ defmodule QyCore.Segment.StateM do
 
   # def stop()
 
-  # def get_segment(id)
+  # def get_segment(name(id))
 
-  # def get_result(id)
+  # def get_result(name(id))
 
-  # def done?(id) do
+  # def done?(name(id)) do
     # locale data
     # |> check_done()
   # end
@@ -227,6 +227,8 @@ defmodule QyCore.Segment.StateM do
   # defp check_done({_segment_and_result, _functions, _maybe_new_state_and_input}), do: false
 
   def get_id(%QyCore.Segment{id: id}), do: id
+
+  def name(id), do: {:global, {__MODULE__, id}}
 
   def perparing_initial(_any) do
     {{nil, nil}, [], nil}
