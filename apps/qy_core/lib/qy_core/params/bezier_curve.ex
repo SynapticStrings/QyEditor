@@ -49,14 +49,34 @@ defmodule QyCore.Params.BezierCurve do
   # http://www.whudj.cn/?p=419
 
   # def to_third_order(points = [_, _, _, _]), do: points
+  # def to_third_order(points)
 
   # def from_third_order(points = [_, _, _, _]), do: points
+  # def from_third_order(points)
 
   # 从曲线到映射的参数（类似于 Cadencii 的功能）
   # 需要检查约束，然后依照时间步长把曲线的点变成序列
   # 到 ds 脚本的就是纯参数了
 
-  # 约束
+  ## 约束
+
+  def check_constraint(curve_or_points, opts) when is_list(opts) do
+    for opt <- opts do
+      constraint(curve_or_points, opt)
+    end
+    |> Enum.reject(&is_nil/1)
+  end
+
   # 比方说一个时间不存在两组参数
-  def constraint(_curve_or_points, :single_param_in_same_time), do: nil
+  def constraint(curve, :single_param_in_same_time) do
+    for {x, _} <- curve do
+      if Enum.count(curve, fn {x_, _} -> x == x_ end) > 1, do: x
+    end
+    |> case do
+      [] -> nil
+      p -> {:has_multiple_params, p}
+    end
+  end
+
+  def constraint(_curve_or_points, _), do: nil
 end
