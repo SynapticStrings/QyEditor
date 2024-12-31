@@ -117,12 +117,11 @@ defmodule QyCore.Segment.StateM do
   @typedoc "一般情况下状态机的状态变化"
   @type normal_actions :: :update_segment | :opt_segment | :update_result | :done
 
-  # TODO: when doc done.
-  # @typedoc "错误处理的有关状态"
-  # @type error_actions :: :segment_invalid | :inference_crash
+  @typedoc "错误处理的有关状态"
+  @type error_actions :: :segment_invalid | :inference_crash
 
   @typedoc "状态机的状态变化"
-  @type actions :: normal_actions() # | error_actions()
+  @type actions :: normal_actions() | error_actions()
 
   @typedoc "新状态相关上下文"
   @type maybe_new_state_and_input ::
@@ -181,30 +180,41 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 准备推理模型的输入
-  def idle(:update_segment) do
+  def idle({:update_segment, new_segment}) do
     # ...
 
-    {:next_state, :required_update, :new_segment}
+    # 需要一个向推理模型发送请求的 Event
+
+    # 数据变化： {_, _} -> {_, _, new_segment}
+    {:next_state, :required_update, new_segment}
   end
 
   # 简单更新数据
-  def idle(:opt_segment) do
+  # 通常是只涉及 offset 的更新
+  def idle({:opt_segment, new_segment}) do
     # ...
 
-    {:keep_state, :NewSegment}
+    # 数据变化：{_, _, new_segment} -> {_, _, {new_segment, input_or_func}}
+    {:keep_state, new_segment}
   end
+
+  # 片段非法
+  # 保持原来的数据
+  # def idle(:segment_invalid)
 
   # 调用模型，等待结果
   def required_update(:update_result) do
     # ...
 
+    # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
     {:next_state, :do_update}
   end
 
   # 得到结果，更新数据
-  def do_update(:done) do
+  def do_update({:done, _new_result}) do
     # ...
 
+    # 数据变化：{{_old_segment, _old_result}, _, {new_segment, input_or_func}} -> {{new_segment, new_result}, _}
     {:next_state, :idle, :newSegmentAndResult}
   end
 
@@ -213,30 +223,38 @@ defmodule QyCore.Segment.StateM do
     # ...
 
     # [TODO) Action 改成 stop
+    # 将 {new_segment, input_or_func} 交由 error_handler 处理
     # {:next_state, :idle, nil}
   end
 
-  # TODO: impl terminate/3
+  # 推理模型崩溃
+  # 停止应用
+  # def AnyState(:inference_crash) do bla bla
+
+  @impl true
+  def terminate(_reason, _current_state, _data) do
+    # ...
+  end
   # 包括出现不可逆错误时停止
   # 以及正常结束时的清理工作
 
   ## Inner API and Helpers
 
-  # defp apply_validate(data) do
+  # defp validate_segment(data) do
 
-  # defp apply_prepare({_, _, {segment, input_or_func}}) when is_function(input_or_func), do: input_or_func.(segment)
-  # defp apply_prepare({_, _, {_segment, input_or_func}}), do: input_or_func
+  # defp prepare_input({_, _, {segment, input_or_func}}) when is_function(input_or_func), do: input_or_func.(segment)
+  # defp prepare_input({_, _, {_segment, input_or_func}}), do: input_or_func
 
-  # defp apply_invoke(data) do
+  # defp invoke_inference(data) do
 
   # defp handle_error(data) do
 
   # defp check_done({_segment_and_result, _functions}), do: true
   # defp check_done({_segment_and_result, _functions, _maybe_new_state_and_input}), do: false
 
-  def get_id(%Segment{id: id}), do: id
+  # def get_id(%Segment{id: id}), do: id
 
-  def name(id), do: {:global, {:segment, id}}
+  defp name(id), do: {:global, {:segment, id}}
 
   def preparing_initial(initial_segment = %Segment{id: segment_id}) do
     # [TODO) prepare function tools.
