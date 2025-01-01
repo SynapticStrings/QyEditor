@@ -11,7 +11,6 @@ defmodule QyScript.DS.Sentence do
           ph_dur: seq(number()),
           ph_num: seq(pos_integer()),
           note_seq: seq(String.t()),
-          note_seq: seq(number()),
           note_slur: seq(0 | 1),
           params: %{atom() => [timestep: number(), content: seq(number)]} | nil
         }

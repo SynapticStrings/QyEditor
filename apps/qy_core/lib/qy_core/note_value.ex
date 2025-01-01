@@ -1,4 +1,4 @@
-defmodule QyCore.NoteTiming do
+defmodule QyCore.NoteValue do
   # 音符时值相关
 
   @type bpm :: number()

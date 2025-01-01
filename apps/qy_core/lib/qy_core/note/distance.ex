@@ -13,7 +13,7 @@ defmodule QyCore.Note.Distance do
   @type quality :: :perfect | :major | :minor | :augmented | :diminished
   @type degree :: {quality(), pos_integer()}
 
-  @spec calculate_distance_sign(Note.note(), Note.note()) :: degree()
+  @spec calculate_distance_sign(Note.note(), Note.note()) :: degree() | {:invalid, term()}
   @doc """
   符号计算，【不返回正负】。
 
@@ -31,6 +31,11 @@ defmodule QyCore.Note.Distance do
     quanlity = get_quanlity(gap, key_diff)
 
     {quanlity, key_diff + over * 7}
+  end
+
+  # 考虑到可能存在休止符的情况
+  def calculate_distance_sign(_note1, _note2) do
+    {:invalid, :maybe_has_rest_note}
   end
 
   @doc """

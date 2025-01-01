@@ -101,6 +101,12 @@ defmodule QyCore.NoteTest do
   end
 
   describe "计算音之间的距离" do
+    test "可能包含休止符" do
+      assert Distance.calculate_distance_sign(:rest, :rest) == {:invalid, :maybe_has_rest_note}
+
+      assert Distance.calculate_distance_sign(:rest, {:a, :natural, 4}) == {:invalid, :maybe_has_rest_note}
+    end
+
     test "一度、八度、十五度" do
       ## 纯一度
       # 一个音
