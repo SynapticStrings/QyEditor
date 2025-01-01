@@ -83,6 +83,25 @@ defmodule QyCore.Params do
   def validate_context(_context, _type), do: nil
   def validate_extra(_extra, _type), do: nil
 
+  ## 约束
+
+  def check_constraint(param_seq, opts) when is_list(opts) do
+    for opt <- opts do
+      constraint(param_seq, opt)
+    end
+    |> Enum.reject(&is_nil/1)
+  end
+
+  def constraint(param_seq, {:less_than, maxinum_value}) do
+    Enum.all?(param_seq, fn x -> x < maxinum_value end)
+  end
+
+  def constraint(param_seq, {:greater_than, mininum_value}) do
+    Enum.all?(param_seq, fn x -> x > mininum_value end)
+  end
+
+  def constraint(_param_seq, _), do: nil
+
   ## 上下文
 
   ## 额外信息
