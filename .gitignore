@@ -21,8 +21,3 @@ erl_crash.dump
 
 # 临时文件，例如测试过程中生成的。
 /tmp/
-
-## 模型相关
-/priv/*_OpenUtau/
-/priv/*_project/
-!.gitkeep
