@@ -58,7 +58,7 @@ defmodule WebUI.MixProject do
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       # 和模型相关
-      {:diff_singer, in_umbrella: true},
+      # {:diff_singer, git: "https://github.com/GES233/DiffSinger"},
       {:qy_core, in_umbrella: true}
     ]
   end
