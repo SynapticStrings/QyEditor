@@ -19,7 +19,7 @@ defmodule WebUI.MixProject do
 
   # 对 OTP 应用的配置
   #
-  # 想要获得更多信息可输入 `mix help compile.app` 。
+  # 想要获得更多信息可运行 `mix help compile.app` 。
   def application do
     [
       mod: {WebUI.Application, []},

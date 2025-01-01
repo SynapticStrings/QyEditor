@@ -15,7 +15,7 @@ defmodule QyCore.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
+  # 想要获得更多信息可运行 `mix help compile.app` 。
   def application do
     [
       extra_applications: [:logger],
@@ -23,12 +23,8 @@ defmodule QyCore.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
+  # 不考虑依赖任何其他非标准库的应用或模块。
   defp deps do
-    [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
-      # {:sibling_app_in_umbrella, in_umbrella: true}
-    ]
+    []
   end
 end
