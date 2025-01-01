@@ -237,7 +237,7 @@ defmodule QyCore.Note do
   def do_convert_note(note, :twelve_et, base_pair) do
     # If it is too slowly, please use NIF.
     base_pair
-    |> octive_operate(note) |> IO.inspect()
+    |> octive_operate(note)
     |> Note.Distance.TwelveETAdapter.calculate_distance_pitch(note)
   end
 
