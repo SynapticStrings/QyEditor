@@ -75,6 +75,7 @@ defmodule QyCore.Params do
       when param_type == :time_seq do
     # ...
   end
+
   def validate_sequence(%__MODULE__{type: {param_type, _}, sequence: _seq})
       when param_type == :element_seq do
     # ...
@@ -98,6 +99,16 @@ defmodule QyCore.Params do
 
   def constraint(param_seq, {:greater_than, mininum_value}) do
     Enum.all?(param_seq, fn x -> x > mininum_value end)
+  end
+
+  # 当前参数是否被手动修改过
+  def constraint(param_seq, {:dirty, default_value_or_validator})
+      when is_function(default_value_or_validator) do
+    default_value_or_validator.(param_seq)
+  end
+
+  def constraint(param_seq, {:dirty, default_value_or_validator}) do
+    Enum.all?(param_seq, fn x -> x == default_value_or_validator end)
   end
 
   def constraint(_param_seq, _), do: nil
