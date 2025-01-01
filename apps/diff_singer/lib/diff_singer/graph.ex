@@ -24,16 +24,75 @@ defmodule DiffSinger.Graph do
 
   计划最后与 `DiffSinger.Port.Serving` 对接的就是这类模块或是其进一步抽象。
   """
-  # use :digraph
 
-  # def add_edge(graph = %__MODULE__{})
+  # 抄袭的 Livebook.Utils.Graph
+  # 后续会基于和 Livebook 的不同进行修改
+  # 简单来说这里的上下游是此节点是否需要来自模型的输出作为输入的程度
 
-  # defp cyclin_check(graph = %__MODULE__{})
-  # -> config: interpret_edge
+  @typedoc """
+  自下而上的图形表示法，编码为子女对父母条目的映射。
+  """
+  @type t() :: %{node_id => node_id | nil}
 
-  # def build(model_list) do
-  # end
+  @type t(node_id) :: %{node_id => node_id | nil}
 
-  # def show_ports(graph, opts \\ []) do
-  # end
+  @type node_id :: term()
+
+  @doc """
+  查找节点 `from_id` 和 `to_id` 之间的路径。
+
+  如果路径存在，将返回一个自上而下的节点列表，其中包括极端节点。否则，将返回一个空列表。
+  """
+  @spec find_path(t(), node_id(), node_id()) :: list(node_id())
+  def find_path(graph, from_id, to_id) do
+    find_path(graph, from_id, to_id, [])
+  end
+
+  defp find_path(_graph, to_id, to_id, path), do: [to_id | path]
+  defp find_path(_graph, nil, _to_id, _path), do: []
+
+  defp find_path(graph, from_id, to_id, path),
+    do: find_path(graph, graph[from_id], to_id, [from_id | path])
+
+  @doc """
+  查找图的离开节点，即没有子节点的节点。
+  """
+  @spec leaves(t()) :: list(node_id())
+  def leaves(graph) do
+    children = MapSet.new(graph, fn {key, _} -> key end)
+    parents = MapSet.new(graph, fn {_, value} -> value end)
+    MapSet.difference(children, parents) |> MapSet.to_list()
+  end
+
+  @doc """
+  还原图中每条自上而下的路径。
+
+  返回累加器列表，图中每片叶子对应一个累加器，没有特定顺序。
+  """
+  @spec reduce_paths(t(), acc, (node_id(), acc -> acc)) :: acc when acc: term()
+  def reduce_paths(graph, acc, fun) do
+    leaves = leaves(graph)
+    cache = do_reduce(graph, leaves, acc, fun, %{})
+    Enum.map(leaves, &cache[&1])
+  end
+
+  defp do_reduce(_graph, [], _initial_acc, _fun, cache), do: cache
+
+  defp do_reduce(graph, [cell_id | cell_ids], initial_acc, fun, cache) do
+    if parent_id = graph[cell_id] do
+      case cache do
+        %{^parent_id => acc} ->
+          acc = fun.(cell_id, acc)
+          cache = put_in(cache[cell_id], acc)
+          do_reduce(graph, cell_ids, initial_acc, fun, cache)
+
+        _ ->
+          do_reduce(graph, [parent_id, cell_id | cell_ids], initial_acc, fun, cache)
+      end
+    else
+      acc = fun.(cell_id, initial_acc)
+      cache = put_in(cache[cell_id], acc)
+      do_reduce(graph, cell_ids, initial_acc, fun, cache)
+    end
+  end
 end
