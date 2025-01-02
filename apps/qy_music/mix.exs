@@ -22,10 +22,9 @@ defmodule QyMusic.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
+  # 就像是 Phoenix.HTML
+  # 虽然名字是 QyMusic ，但是其不依赖于 QyCore
   defp deps do
-    [
-      {:qy_core, in_umbrella: true}
-    ]
+    []
   end
 end

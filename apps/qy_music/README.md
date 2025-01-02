@@ -1,21 +1,16 @@
 # QyMusic
 
-**TODO: Add description**
+QyEditor 中关于音乐的业务逻辑。
 
-## Installation
+## 实现的功能
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `qy_music` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:qy_music, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/qy_music>.
-
+- [x] 音高计算
+  - [x] 音高 -> 音频
+    - [x] 十二平均律
+    - [ ] 纯律
+  - [x] 音符间距离计算
+- [ ] 小节与节拍
+  - *一个例子：音节的元音部分于节拍开始处开始*
+  - [ ] 音符时长相关
+  - [ ] 装饰音
+  - [ ] 音符 -> 绝对时长

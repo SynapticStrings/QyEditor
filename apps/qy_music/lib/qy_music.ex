@@ -1,18 +1,18 @@
 defmodule QyMusic do
   @moduledoc """
-  Documentation for `QyMusic`.
+  提供乐理支持。
   """
 
   @doc """
-  Hello world.
+  一切安好
 
   ## Examples
 
-      iex> QyMusic.hello()
-      :world
+      iex> QyMusic.ping()
+      :pomg
 
   """
-  def hello do
-    :world
+  def ping do
+    :pong
   end
 end
