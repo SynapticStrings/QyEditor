@@ -2,6 +2,15 @@ defmodule QyMusic.Note do
   @moduledoc """
   负责处理音符相关的业务。
   （谁能想到，这么多玩意儿，最开始就是为了根据音高算频率的）
+
+  目前拥有的函数：
+
+  * `note_to_text/1`：将音符转换为文本
+  * `parse_spn/1`：将文本转换为音符
+  * `format/2`：格式化音符
+  * `higher?/2`：比较两个音符的高低
+  * `same?/2`：比较两个音符是否相同
+
   """
 
   alias QyMusic.Note
