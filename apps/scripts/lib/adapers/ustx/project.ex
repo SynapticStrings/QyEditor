@@ -1,5 +1,5 @@
 defmodule QyScript.USTx.Project do
-  defstruct [:name, :comment,]
+  defstruct [:name, :comment]
 
   #
 end

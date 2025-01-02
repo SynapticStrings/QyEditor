@@ -1,9 +1,16 @@
 defmodule QyCore.NoteValue do
   # 音符时值相关
 
-  @type length :: :whole | :half | :quarter | :quaver | :semiquaver | :demisemiquaver | :hemidemisemiquaver
-  | {integer(), :th_note}
-  | {integer(), :whole_note}
+  @type length ::
+          :whole
+          | :half
+          | :quarter
+          | :quaver
+          | :semiquaver
+          | :demisemiquaver
+          | :hemidemisemiquaver
+          | {integer(), :th_note}
+          | {integer(), :whole_note}
 
   @type tuplet :: {:tuplet, integer(), length()}
 
@@ -31,6 +38,7 @@ defmodule QyCore.NoteValue do
     def langth_mapper(unquote(a)), do: unquote(b)
     def langth_mapper(unquote(b)), do: unquote(a)
   end
+
   # Mannual all
   def langth_mapper(:whole), do: {1, :whole_note}
 

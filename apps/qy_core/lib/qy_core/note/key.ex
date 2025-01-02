@@ -6,7 +6,8 @@ defmodule QyCore.Note.Key do
   # 降号负数，没有调号是零
 
   # 教会调式
-  @type church_modes :: :ionian | :dorian | :phrygian | :lydian | :mixolydian | :aeolian | :locrian
+  @type church_modes ::
+          :ionian | :dorian | :phrygian | :lydian | :mixolydian | :aeolian | :locrian
   # 背诵可以借鉴官大为老师某期节目的「我的霹雳猫阿洛」
 
   # @church_modes_step %{
@@ -23,5 +24,4 @@ defmodule QyCore.Note.Key do
   def build_note(_mode, _tonic) do
     # 构建该调式下的音符
   end
-
 end

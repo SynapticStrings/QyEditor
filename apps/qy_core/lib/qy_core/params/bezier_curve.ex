@@ -42,7 +42,7 @@ defmodule QyCore.Params.BezierCurve do
   @doc "将曲线或控制点整体旋转"
   @spec rotate(curve() | control_points(), angle_in_rad :: float()) ::
           curve() | control_points()
-  def rotate(points_or_curve, angle_in_rad \\ :math.pi / 2),
+  def rotate(points_or_curve, angle_in_rad \\ :math.pi() / 2),
     do:
       Enum.map(points_or_curve, fn {x, y} ->
         {x * :math.cos(angle_in_rad) - y * :math.sin(angle_in_rad),

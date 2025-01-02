@@ -31,7 +31,7 @@ defmodule QyCore.Segment do
     :id,
     offset: 0.0,
     comments: "",
-    params: %{},
+    params: %{}
   ]
 
   ## 创建 Segment
@@ -50,7 +50,8 @@ defmodule QyCore.Segment do
       |> String.slice(0..9)
 
     # 随机数
-    random = :crypto.strong_rand_bytes(8)
+    random =
+      :crypto.strong_rand_bytes(8)
       |> Base.encode16(case: :lower)
 
     timestamp <> random
@@ -61,8 +62,8 @@ defmodule QyCore.Segment do
   def purely_id(id) when is_binary(id), do: id
 
   def with_same_id?(segment1, segment2) do
-    IO.inspect segment1.id
-    IO.inspect segment2.id
+    IO.inspect(segment1.id)
+    IO.inspect(segment2.id)
     segment1.id == segment2.id or not (segment1.id != nil and segment2.id != nil)
   end
 
@@ -71,6 +72,7 @@ defmodule QyCore.Segment do
   end
 
   ## 雷同逻辑
+
   # 简单来说有两类修改：需要调用模型得到新结果和不需要，其引发了不同的情景
   @spec diff?(QyCore.Segment.t(), QyCore.Segment.t()) :: :required | :update | {:error, term()}
   def diff?(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
@@ -83,9 +85,11 @@ defmodule QyCore.Segment do
       {:error, :segments_has_not_same_name}
     end
   end
+
   def diff?(_, _), do: {:error, :isnt_segment}
 
-  @spec simple_update(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) :: QyCore.Segment.segment_and_result()
+  @spec simple_update(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) ::
+          QyCore.Segment.segment_and_result()
   def simple_update({old_segment, old_result}, new_segment) do
     {new_segment, %{old_result | offset: old_segment.offset}}
   end

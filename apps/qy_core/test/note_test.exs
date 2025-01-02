@@ -104,7 +104,8 @@ defmodule QyCore.NoteTest do
     test "可能包含休止符" do
       assert Distance.calculate_distance_sign(:rest, :rest) == {:invalid, :maybe_has_rest_note}
 
-      assert Distance.calculate_distance_sign(:rest, {:a, :natural, 4}) == {:invalid, :maybe_has_rest_note}
+      assert Distance.calculate_distance_sign(:rest, {:a, :natural, 4}) ==
+               {:invalid, :maybe_has_rest_note}
     end
 
     test "一度、八度、十五度" do
@@ -125,10 +126,10 @@ defmodule QyCore.NoteTest do
                {:perfect, 8}
 
       assert Distance.calculate_distance_sign({:a, :natural, 2}, {:a, :natural, 4}) ==
-                {:perfect, 15}
+               {:perfect, 15}
 
       assert Distance.calculate_distance_sign({:a, :natural, 5}, {:a, :natural, 2}) ==
-                {:perfect, 22}
+               {:perfect, 22}
     end
 
     test "二度" do
@@ -147,11 +148,13 @@ defmodule QyCore.NoteTest do
     end
 
     test "纯四度" do
-      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:f, :natural, 4}) == {:perfect, 4}
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:f, :natural, 4}) ==
+               {:perfect, 4}
     end
 
     test "纯五度" do
-      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:g, :natural, 4}) == {:perfect, 5}
+      assert Distance.calculate_distance_sign({:c, :natural, 4}, {:g, :natural, 4}) ==
+               {:perfect, 5}
     end
 
     test "六度" do

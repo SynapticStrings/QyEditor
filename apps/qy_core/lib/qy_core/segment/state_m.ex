@@ -246,7 +246,6 @@ defmodule QyCore.Segment.StateM do
     container =
       case old_container do
         {_mannual_segment = %Segment{}, _generated_segment} -> {old_container, new_segment}
-
         # 直接更新就好啦
         {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
       end

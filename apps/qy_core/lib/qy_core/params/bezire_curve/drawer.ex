@@ -4,7 +4,7 @@ defmodule QyCore.Params.BezierCurve.Drawer do
 
   # 这个函数抄的 https://developer.aliyun.com/article/678181
   # 有了不少魔改
-  @spec draw(BezierCurve.control_points(), float()) ::BezierCurve.curve()
+  @spec draw(BezierCurve.control_points(), float()) :: BezierCurve.curve()
   def draw(control_points, _step) when length(control_points) == 1 do
     control_points
   end
@@ -21,7 +21,7 @@ defmodule QyCore.Params.BezierCurve.Drawer do
 
   # Include last points
   # 因为精度的问题所以用了这个比较奇葩的方式来做
-  defp do_draw(_, _, step, range, curve_points) when range >= (1.0 + step), do: curve_points
+  defp do_draw(_, _, step, range, curve_points) when range >= 1.0 + step, do: curve_points
 
   defp do_draw(control_points, control_points_num, step, range, curve_points) do
     new = add_point(control_points, control_points_num, range)
@@ -37,7 +37,8 @@ defmodule QyCore.Params.BezierCurve.Drawer do
   end
 
   # 一点控制点也没有
-  defp add_point(_, control_points_num, _) when control_points_num <= 0, do: raise("control points' number less than 1.")
+  defp add_point(_, control_points_num, _) when control_points_num <= 0,
+    do: raise("control points' number less than 1.")
 
   # 只有一个控制点，返回第一个
   defp add_point(points, 1, _), do: points |> hd()

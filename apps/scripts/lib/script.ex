@@ -1,5 +1,4 @@
 defmodule QyScript do
-
   @doc """
   Hello world.
 

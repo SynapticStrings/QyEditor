@@ -4,24 +4,25 @@ defmodule QyCore.Project do
   """
 
   @type t :: %__MODULE__{
-    name: String.t(),
-    description: String.t()
-  }
+          name: String.t(),
+          description: String.t()
+        }
   defstruct [
     :name,
     :description,
   ]
 
-  @type entry :: %{
-    name: String.t(),
-    type: :url,
-    url: String.t()
-  }
-  | %{
-    name: String.t(),
-    type: :file,
-    path: Path.t()
-  }
+  @type entry ::
+          %{
+            name: String.t(),
+            type: :url,
+            url: String.t()
+          }
+          | %{
+              name: String.t(),
+              type: :file,
+              path: Path.t()
+            }
 
   ## 建立新工程
   # 一个工程对应一个 QyCore.Segment.Manager

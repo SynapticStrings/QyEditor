@@ -3,8 +3,7 @@ defmodule WebUI.Demo do
 
   def render(assigns) do
     ~H"""
-    Current temperature: <%= @temperature %>°F
-    <button phx-click="inc_temperature">+</button>
+    Current temperature: <%= @temperature %>°F <button phx-click="inc_temperature">+</button>
     <button phx-click="dec_temperature">-</button>
     """
   end

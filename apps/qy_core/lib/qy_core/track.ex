@@ -10,7 +10,8 @@ defmodule QyCore.Track do
           # （实际的片段以及推理过程归别的进程）
           segments_record: [QyCore.Segment.t()],
           # op means operate
-          default_op_graph: %{atom() => any()}, # 这块还没想好
+          # 这块还没想好
+          default_op_graph: %{atom() => any()}
         }
   defstruct [:id, :manager, :name, :segments_record, :default_op_graph]
 end
