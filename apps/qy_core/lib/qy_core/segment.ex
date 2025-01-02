@@ -61,12 +61,34 @@ defmodule QyCore.Segment do
   def purely_id(id) when is_binary(id), do: id
 
   def with_same_id?(segment1, segment2) do
-    segment1.id == segment2.id
+    IO.inspect segment1.id
+    IO.inspect segment2.id
+    segment1.id == segment2.id or not (segment1.id != nil and segment2.id != nil)
+  end
+
+  def same_offset?(segment1, segment2) do
+    segment1.offset == segment2.offset
   end
 
   ## 雷同逻辑
   # 简单来说有两类修改：需要调用模型得到新结果和不需要，其引发了不同的情景
-  # def diff?(segment1, segment2, opts \\ [])
+  @spec diff?(QyCore.Segment.t(), QyCore.Segment.t()) :: :required | :update | {:error, term()}
+  def diff?(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
+    if with_same_id?(segment1, segment2) do
+      case same_offset?(segment1, segment2) do
+        true -> :required
+        false -> :update
+      end
+    else
+      {:error, :segments_has_not_same_name}
+    end
+  end
+  def diff?(_, _), do: {:error, :isnt_segment}
+
+  @spec simple_update(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) :: QyCore.Segment.segment_and_result()
+  def simple_update({old_segment, old_result}, new_segment) do
+    {new_segment, %{old_result | offset: old_segment.offset}}
+  end
 
   ## 其他约束
   # 相同轨道的 segment 是否存在重叠

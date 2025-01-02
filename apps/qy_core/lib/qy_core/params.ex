@@ -60,8 +60,8 @@ defmodule QyCore.Params do
   @type param_name :: atom()
 
   @doc "参数是否是结果"
-  def is_result?(%__MODULE__{type: {:generated, _, _}}), do: true
-  def is_result?(_), do: false
+  def result?(%__MODULE__{type: {:generated, _, _}}), do: true
+  def result?(_), do: false
 
   @doc "是否是时间序列"
   def time_seq?(%__MODULE__{type: {_, :time_seq, _}}), do: true
