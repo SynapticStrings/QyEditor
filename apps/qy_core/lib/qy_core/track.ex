@@ -4,7 +4,7 @@ defmodule QyCore.Track do
 
   @type t :: %__MODULE__{
           id: any(),
-          manager: pid(),
+          manager: QyCore.Segment.Manager.id(),
           name: String.t(),
           # 用于持久化的片段记录
           # （实际的片段以及推理过程归别的进程）

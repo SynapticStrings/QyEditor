@@ -40,6 +40,7 @@ defmodule QyCore.Segment.StateM do
   * `error_handler/2`
     - 输入 `{:error, reason}, context`
     - 决定结束状态机并返回报错信息还是其他
+  * `persist/1` 持久化保存
 
   ### 新状态上下文（`maybe_new_state_and_input`）
 
@@ -142,9 +143,10 @@ defmodule QyCore.Segment.StateM do
   def callback_mode(),
     # 简单来说就是把状态名当成函数
     do: :state_functions
-  # Or :handle_event_function
 
   ## Public API
+
+  # 启动
 
   def start(init_segment) do
     {name, container} = preparing_initial(init_segment)
@@ -155,52 +157,93 @@ defmodule QyCore.Segment.StateM do
   def start_link(init_segment) do
     {name, container} = preparing_initial(init_segment)
 
-    GenStateM.start_link(name, __MODULE__, {container}, [])
+    GenStateM.start_link(name, __MODULE__, container, [])
   end
 
-  def stop(segment_id) do
-    GenStateM.stop(name(segment_id))
+  # 停止
+
+  def stop(pid) when is_pid(pid), do: GenStateM.stop(pid)
+  def stop(segment_or_id) do
+    segment_or_id
+    |> Segment.purely_id()
+    |> name()
+    |> GenStateM.stop()
   end
 
-  # def get_segment(name(id)) do
+  # 获得数据
+
+  def get_container(segment_id) do
+    # 这个得重写
+    GenStateM.call(name(segment_id), :get_container)
+  end
+
+  # def get_segment(segment_id) do
+    # segment_id
+    # |> get_container()
   # end
 
-  # def get_result(name(id))
+  # def get_result(segment_id) do
+  # end
 
-  # def done?(name(id)) do
-    # locale data
+  # def done?(segment_id) do
+    # segment_id
+    # |> get_container()
     # |> check_done()
   # end
+
+  # 更新数据
+  # def update(id, new_segment, opts \\ [])
+
+  # def update(id, opts \\ []), do: GenStateM.cast()
 
   ## Callbacks
 
   @impl true
   def init(container) do
+    # 进程在启动时不进行状态更新
     {:ok, :idle, container}
   end
 
+  # 获得状态机的数据
+  # 本质上是一个发送消息的 Action
+  defp exec_send_data(from, data) do
+    IO.inspect(from, label: :from)
+    # Send current data to `from`
+
+    {:keep_state, data}
+  end
+
+  def idle({:call, from}, :get_container, data), do: exec_send_data(from, data)
+  def required_update({:call, from}, :get_container, data), do: exec_send_data(from, data)
+  def do_update({:call, from}, :get_container, data), do: exec_send_data(from, data)
+
   # 准备推理模型的输入
-  def idle({:update_segment, new_segment}) do
-    # ...
+  def idle({:update_segment, new_segment}, old_container) do
 
     # 需要一个向推理模型发送请求的 Event
 
     # 数据变化： {_, _} -> {_, _, new_segment}
-    {:next_state, :required_update, new_segment}
+    {segment_pair, func} = old_container
+
+    {:next_state, :required_update, {segment_pair, func, new_segment}}
   end
 
   # 简单更新数据
   # 通常是只涉及 offset 的更新
-  def idle({:opt_segment, new_segment}) do
-    # ...
-
+  def idle({:opt_segment, new_segment}, old_container) do
     # 数据变化：{_, _, new_segment} -> {_, _, {new_segment, input_or_func}}
-    {:keep_state, new_segment}
+    {{_old_segment, result}, func} = old_container
+
+    {:keep_state, {{new_segment, result}, func}}
   end
 
   # 片段非法
-  # 保持原来的数据
-  # def idle(:segment_invalid)
+  def idle({:segment_invalid, _invalid_segment}, container) do
+    # 发送错误信息
+
+    # 保持原来的数据
+    {:keep_state, container}
+  end
 
   # 调用模型，等待结果
   def required_update(:update_result) do
@@ -236,6 +279,8 @@ defmodule QyCore.Segment.StateM do
 
   # 推理模型崩溃
   # 停止应用
+  # def when_crash(_reason, _container) do
+
   # def AnyState(:inference_crash) do bla bla
 
   @impl true
@@ -244,6 +289,8 @@ defmodule QyCore.Segment.StateM do
   end
   # 包括出现不可逆错误时停止
   # 以及正常结束时的清理工作
+
+  # def handle_event
 
   ## Inner API and Helpers
 
@@ -263,9 +310,9 @@ defmodule QyCore.Segment.StateM do
 
   defp name(id), do: {:global, {:segment, id}}
 
-  def preparing_initial(initial_segment = %Segment{id: segment_id}) do
+  def preparing_initial(initial_segment = %Segment{id: segment_id}, func \\ []) do
     # [TODO) prepare function tools.
-    {name(segment_id), {{nil, nil}, [], initial_segment}}
+    {name(segment_id), {{nil, nil}, func, initial_segment}}
   end
 
   def get_func_from_data(_data, _role) do
