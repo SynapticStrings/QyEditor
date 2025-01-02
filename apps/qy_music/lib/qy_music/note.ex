@@ -1,10 +1,10 @@
-defmodule QyCore.Note do
+defmodule QyMusic.Note do
   @moduledoc """
   负责处理音符相关的业务。
   （谁能想到，这么多玩意儿，最开始就是为了根据音高算频率的）
   """
 
-  alias QyCore.Note
+  alias QyMusic.Note
 
   # 选用不同的调式
   # 十二平均律、五度相生律
@@ -60,9 +60,9 @@ defmodule QyCore.Note do
 
   ### Examples
 
-      iex> QyCore.Note.parse_spn("rest")
+      iex> QyMusic.Note.parse_spn("rest")
       :rest
-      iex> QyCore.Note.parse_spn("A4")
+      iex> QyMusic.Note.parse_spn("A4")
       {:a, :natural, 4}
   """
   @spec parse_spn(raw_note_or_rest :: <<_::16, _::_*8>>) :: note()
@@ -107,9 +107,9 @@ defmodule QyCore.Note do
 
   ## Examples
 
-      iex> QyCore.Note.format({:c, :ss, 4})
+      iex> QyMusic.Note.format({:c, :ss, 4})
       {:d, :natural, 4}
-      iex> QyCore.Note.format({:c, :ff, 4})
+      iex> QyMusic.Note.format({:c, :ff, 4})
       {:b, :flat, 3}
   """
   @spec format(note(), keyword()) :: note()

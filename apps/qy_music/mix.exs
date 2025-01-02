@@ -1,9 +1,9 @@
-defmodule QyScripts.MixProject do
+defmodule QyMusic.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :scripts,
+      app: :qy_music,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -15,7 +15,7 @@ defmodule QyScripts.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
+  # 想要获得更多信息可运行 `mix help compile.app` 。
   def application do
     [
       extra_applications: [:logger]
@@ -25,11 +25,7 @@ defmodule QyScripts.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # JSON parser
-      # Same with :web_ui
-      {:jason, "~> 1.2"},
-      # Qy related
-      {:qy_music, in_umbrella: true}
+      {:qy_core, in_umbrella: true}
     ]
   end
 end

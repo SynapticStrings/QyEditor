@@ -35,7 +35,7 @@ defmodule QyScript.DS.JSON do
           |> Map.update(
             :note_seq,
             "rest",
-            &Enum.map(&1, fn note -> QyCore.Note.note_to_text(note) end)
+            &Enum.map(&1, fn note -> QyMusic.Note.note_to_text(note) end)
           )
       end
 
@@ -48,7 +48,7 @@ defmodule QyScript.DS.JSON do
         |> Map.update(
           :note_seq,
           :rest,
-          &Enum.map(&1, fn note -> QyCore.Note.parse_spn(note) end)
+          &Enum.map(&1, fn note -> QyMusic.Note.parse_spn(note) end)
         )
         |> Map.update(:note_dur, 0.0, &Enum.map(&1, fn note -> String.to_float(note) end))
         |> Map.update(:note_slur, 0, &Enum.map(&1, fn note -> String.to_integer(note) end))

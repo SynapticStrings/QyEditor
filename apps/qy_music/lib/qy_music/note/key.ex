@@ -1,4 +1,4 @@
-defmodule QyCore.Note.Key do
+defmodule QyMusic.Note.Key do
   # 关于调号
   # 关于这个模块的必要性可能需要讨论下
 
@@ -20,7 +20,7 @@ defmodule QyCore.Note.Key do
   #   :locrian => [1, 2, 2, 1, 2, 2, 2]
   # }
 
-  @spec build_note(church_modes(), QyCore.Note.note()) :: nil
+  @spec build_note(church_modes(), QyMusic.Note.note()) :: nil
   def build_note(_mode, _tonic) do
     # 构建该调式下的音符
   end

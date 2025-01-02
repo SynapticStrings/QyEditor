@@ -1,8 +1,8 @@
-defmodule QyCore.NoteTest do
+defmodule QyMusic.NoteTest do
   use ExUnit.Case
 
-  alias QyCore.Note
-  alias QyCore.Note.Distance
+  alias QyMusic.Note
+  alias QyMusic.Note.Distance
   doctest Note
 
   describe "将 SPN 转变为内在形式" do

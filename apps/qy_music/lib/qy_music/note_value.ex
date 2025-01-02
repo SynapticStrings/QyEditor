@@ -1,4 +1,4 @@
-defmodule QyCore.NoteValue do
+defmodule QyMusic.NoteValue do
   # 音符时值相关
 
   @type length ::

@@ -1,4 +1,4 @@
-defmodule QyCore.Note.Distance do
+defmodule QyMusic.Note.Distance do
   @moduledoc """
   计算音之间的距离。
 
@@ -7,7 +7,7 @@ defmodule QyCore.Note.Distance do
   超过十五度的音报错暂时不管。
   """
 
-  alias QyCore.Note
+  alias QyMusic.Note
 
   # 纯大小增减
   @type quality :: :perfect | :major | :minor | :augmented | :diminished
@@ -223,9 +223,9 @@ defmodule QyCore.Note.Distance do
   end
 end
 
-defmodule QyCore.Note.Distance.TwelveETAdapter do
+defmodule QyMusic.Note.Distance.TwelveETAdapter do
   # 十二平均律
-  alias QyCore.{Note.Distance}
+  alias QyMusic.{Note.Distance}
   @behaviour Distance
 
   def calculate_distance_pitch({{bkey, bvar, boctave}, base_pitch}, {_, _, toctave} = target_note) do
@@ -246,8 +246,8 @@ end
 # 反正 DiffSinger 的声码器是不在意那么细节的差异的
 # 我也听不大出来其实
 
-defmodule QyCore.Note.Distance.PythagoreanAdapter do
-  alias QyCore.{Note.Distance}
+defmodule QyMusic.Note.Distance.PythagoreanAdapter do
+  alias QyMusic.{Note.Distance}
   @behaviour Distance
 
   # [TODO)
