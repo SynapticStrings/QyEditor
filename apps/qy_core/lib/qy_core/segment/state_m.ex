@@ -2,11 +2,7 @@ defmodule QyCore.Segment.StateM do
   # 参考资料
   # https://www.erlang.org/doc/system/statem.html
   @moduledoc """
-  对片段状态的管理。
-
-  简单来说就是为了更直观地展示片段的状态（）。
-
-  ## 总览
+  对片段状态的管理，为了更直观地向用户展示片段的状态。
 
   为了确保片段能够实行增量式的渲染（输入变化时，只重新计算受影响的内容），
   故该负责片段状态管理的模块基于状态机设计。
@@ -78,6 +74,10 @@ defmodule QyCore.Segment.StateM do
   * `:update_result` 准备调用模型推理
     - 通过调用对应的工具函数来将片段的数据交由推理模型处理
     - `:required_update` -> `:do_update`
+  * `:recieve_partial` 得到部分结果
+    - 一般是模型的输出是部分的，需要继续等待
+    - `:do_update` -> `:required_update`
+    - 递归性地更新结果
   * `:done` 得到结果，固定新的（Segment 与输出）
     - `:do_update` -> `:idle`
     - [TODO) 需要深入讨论可能会修改 Segment 本身的情况（例如音高参数，其既可以由模型生成，有可能被手动修改）
@@ -208,6 +208,13 @@ defmodule QyCore.Segment.StateM do
 
     # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
     {:next_state, :do_update}
+  end
+
+  def do_update({:recieve_partial, _partial_result}) do
+    # ...
+
+    # 数据变化：需要讨论
+    {:keep_state, :newSegmentAndResult}
   end
 
   # 得到结果，更新数据

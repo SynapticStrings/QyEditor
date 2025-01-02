@@ -9,10 +9,13 @@ defmodule QyCore.Segment do
 
   @type segment_and_result :: {QyCore.Segment.t(), any()}
 
+  # 参数的位置（通常在多步渲染时会被用到）
+  @type param_loc :: any()
+
   @type t :: %__MODULE__{
     id: id(),
     offset: number(),
-    params: [QyCore.Params.t()],
+    params: %{param_loc() => QyCore.Params.t()},
     comments: any(),
   }
   defstruct [

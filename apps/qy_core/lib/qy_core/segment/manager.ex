@@ -26,9 +26,14 @@ defmodule QyCore.Segment.Manager do
   # 分割一个 Segment
   # def split
 
+  ## 持久化相关
+
   # 将 Segment 持久化
   # def persist
 
   # 从持久化中恢复 Segment
   # def restore
+
+  # 全部更改为某次记录
+  # def update
 end
