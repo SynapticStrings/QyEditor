@@ -172,9 +172,9 @@ defmodule QyCore.Segment.StateM do
   # 但是从用户的视角来看，还是来源于状态机的动作
   # 其大致逻辑如下（没有考虑失败以及错误捕捉的情况）
   #
-  # +------+                       +--------+                  +-------+
-  # | User | -------update-------> | StateM |                  | Model |
-  # +------+                       +--------+                  +-------+
+  # +--------+                       +--------+                  +-------+
+  # | Caller | -------update-------> | StateM |                  | Model |
+  # +--------+                       +--------+                  +-------+
   #    |                               |        validator         |
   #    |                               |  -and-usability_check->  |-do_check\
   #    |                               |                          |<--------/
@@ -241,13 +241,23 @@ defmodule QyCore.Segment.StateM do
     GenStateM.start(name, __MODULE__, {data}, [])
   end
 
-  @spec start(Segment.t()) :: {:ok, pid()} | {:error, term()}
+  @spec start_link(Segment.t()) :: {:ok, pid()} | {:error, term()}
   def start_link(init_segment) do
     {name, data} = preparing_initial(init_segment)
 
     :logger.info("Starting segment state machine: #{inspect(name)}")
 
-    GenStateM.start_link(name, __MODULE__, data, [])
+    GenStateM.start_link(name, __MODULE__, {data}, [])
+  end
+
+  def child_spec(init_segment = %Segment{}) do
+    %{
+      id: Segment.purely_id(init_segment.id),
+      start: {__MODULE__, :start_link, [init_segment]},
+      restart: :permanent,
+      shutdown: 5000,
+      type: :worker
+    }
   end
 
   # 停止

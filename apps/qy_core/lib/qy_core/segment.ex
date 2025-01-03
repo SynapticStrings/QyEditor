@@ -28,6 +28,7 @@ defmodule QyCore.Segment do
           params: %{param_loc() => Params.t()},
           comments: any()
         }
+  @enforce_keys [:id]
   defstruct [
     :id,
     offset: 0.0,
