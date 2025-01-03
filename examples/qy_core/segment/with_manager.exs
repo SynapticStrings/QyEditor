@@ -1,4 +1,3 @@
-
 # 主要的子进程管理器
 children = [
   {DynamicSupervisor, strategy: :one_for_one, name: QyCore.Segment.Manager}

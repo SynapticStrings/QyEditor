@@ -30,7 +30,11 @@ defmodule QyCore.Segment.Proto do
   end
 
   defmodule Caller do
-    @callback send_event_to_caller(msg :: term()) :: :ok
+    @moduledoc """
+    和模型通信时向其他进程（一般是最开始触发推理事务的进程）发送消息时所用到的回调。
+    """
+
+    @callback send_event_to_caller(payload :: term()) :: :ok
   end
 
   def caller() do
@@ -40,11 +44,20 @@ defmodule QyCore.Segment.Proto do
   end
 
   defmodule Executor do
-    @moduledoc "和模型通信所用到的回调"
+    @moduledoc """
+    和推理模型通信时用到的回调。
 
-    @callback validate_segment_with_model(QyCore.Segment.t()) :: QyCore.Segment.StateM.check_data_status_msg()
+    通常由下游编写的模块实现。
+    """
 
+    @callback validate_segment_with_model(QyCore.Segment.t()) ::
+                QyCore.Segment.StateM.check_data_status_msg()
+
+    @doc "确定模型的可行性"
     @callback usability_check() :: QyCore.Segment.StateM.model_usability_msg()
+
+    # TODO 需要确定具体的返回值
+    @callback execute_inference(QyCore.Segment.t()) :: QyCore.Segment.segment_and_result()
   end
 
   def executor() do

@@ -22,12 +22,14 @@ defmodule QyCore.Segment do
   # 参数的位置（通常在多步渲染时会被用到）
   @type param_loc :: any()
 
-  @type t :: nil | %__MODULE__{
-          id: id_as_key(),
-          offset: number(),
-          params: %{param_loc() => Params.t()},
-          comments: any()
-        }
+  @type t ::
+          nil
+          | %__MODULE__{
+              id: id_as_key(),
+              offset: number(),
+              params: %{param_loc() => Params.t()},
+              comments: any()
+            }
   @enforce_keys [:id]
   defstruct [
     :id,
@@ -89,6 +91,7 @@ defmodule QyCore.Segment do
       {:error, :segments_has_not_same_name}
     end
   end
+
   # When initial
   def update_or_modify(nil, _), do: :required
 

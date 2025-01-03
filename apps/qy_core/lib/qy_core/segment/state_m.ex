@@ -137,7 +137,7 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "状态机返回给发起请求的进程的信息类型"
   @type check_segment_result_msg ::
-  {:ok, :required_update} | {:ok, :operate_inference_end} | {:error, term()}
+          {:ok, :required_update} | {:ok, :operate_inference_end} | {:error, term()}
 
   @typedoc "状态机将更新片段时返回给发起请求的进程的完整信息"
   @type send_load_status :: {:reply, pid(), check_segment_result_msg()}
@@ -146,16 +146,15 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "状态机将准备更新模型时获得的事件内容"
   @type ready_update_event_content ::
-          {:ready_for_update, validator :: (Segment.t() -> model_usability_msg()), usability_check :: ( -> any())}
-
-  # 用函数还是直接返回进程的 id ？
-  # @callback get_userside_process() :: pid()
+          {:ready_for_update, validator :: (Segment.t() -> model_usability_msg()),
+           usability_check :: (-> any())}
 
   @type check_data_status_msg :: :accpet | {:reject, term()}
 
   @type model_usability_msg :: :ok | {:error, term()}
 
-  @type send_model_status_actions :: {:reply, pid(), check_data_status_msg() | model_usability_msg()}
+  @type send_model_status_actions ::
+          {:reply, pid(), check_data_status_msg() | model_usability_msg()}
 
   # 虽然以下动作由状态机与负责推理的模型交互
   # 但是从用户的视角来看，还是来源于状态机的动作
@@ -194,11 +193,16 @@ defmodule QyCore.Segment.StateM do
   ## 其他类型
 
   @typedoc "状态机被动接受事件的事件内容"
-  @type events_from_user :: load_segment_event_content() | ready_update_event_content() | get_data()
+  @type events_from_user ::
+          load_segment_event_content() | ready_update_event_content() | get_data()
 
   @typedoc "来自状态机发起请求业务时接收的事件的内容"
   @type events_from_model ::
-          :inference_begin | :recieve_partial | :inference_end | :could_not_fetch_model | :inference_crash
+          :inference_begin
+          | :recieve_partial
+          | :inference_end
+          | :could_not_fetch_model
+          | :inference_crash
 
   @typedoc "状态机的事件集合"
   @type events :: events_from_user() | events_from_model()
@@ -227,7 +231,7 @@ defmodule QyCore.Segment.StateM do
 
     :logger.info("Starting segment state machine: #{inspect(name)}")
 
-    GenStateM.start(name, __MODULE__, {data}, [])
+    GenStateM.start(name, __MODULE__, data, [])
   end
 
   @spec start_link(Segment.t()) :: {:ok, pid()} | {:error, term()}
@@ -236,7 +240,7 @@ defmodule QyCore.Segment.StateM do
 
     :logger.info("Starting segment state machine: #{inspect(name)}")
 
-    GenStateM.start_link(name, __MODULE__, {data}, [])
+    GenStateM.start_link(name, __MODULE__, data, [])
   end
 
   def child_spec(init_segment = %Segment{}) do
@@ -312,7 +316,8 @@ defmodule QyCore.Segment.StateM do
   # 获得状态机的数据
   @spec idle(
           {:call, any()},
-          get_data() | load_segment_event_content(), # | ready_update_event_content(),
+          # | ready_update_event_content(),
+          get_data() | load_segment_event_content(),
           data()
         ) ::
           {:keep_state_and_data, [send_data_action()]}
@@ -325,6 +330,110 @@ defmodule QyCore.Segment.StateM do
         {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
         old_data
       ) do
+    load_segment_before_send_to_model(
+      from,
+      new_segment,
+      simple_opt_validator,
+      simple_opt_updator,
+      old_data
+    )
+  end
+
+  def idle(
+        {:call, _from},
+        {:ready_for_update, _validator, _usability_check},
+        {%Segment{}, %Segment{}}
+      ) do
+    # 这种情况就不变了
+    {:keep_state_and_data, []}
+  end
+
+  def idle({:call, _from}, {:ready_for_update, _validator, _usability_check}, {{_, _}, _}) do
+    # 需要通过 validator 来检查新片段是否合法
+    # 是对【模型】而言是否可以运行
+    # 不合法 -> 丢掉新数据
+    # 合法 -> 向推理模型的进程发送消息，确定其是否可用
+    {:keep_state_and_data, []}
+  end
+
+  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
+
+  def required_update(
+        {:call, from},
+        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
+        old_data
+      ) do
+    # 我打个比方吧，作业在课代表收起来但还没有给老师的时候再交还来得及
+    # 我不是那种很坏的课代表，所以这里依旧可以更改数据
+    load_segment_before_send_to_model(
+      from,
+      new_segment,
+      simple_opt_validator,
+      simple_opt_updator,
+      old_data
+    )
+  end
+
+  # 调用模型，等待结果
+  # 适合用 cast
+  def required_update(:cast, {:inference_begin, _some_func}, {{old_segment, old_result}, new_segment}) do
+    # ...
+
+    # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
+    # 数据增加额外的上下文
+    {:next_state, :do_update, {{old_segment, old_result}, new_segment}}
+  end
+
+  def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
+
+  def do_update(:cast, {:recieve_partial, partial_result}, data) do
+    # ...
+
+    # 数据变化：需要讨论
+    {:keep_state, attach_partial_result_to_data(data, partial_result, :partial)}
+  end
+
+  # 得到结果，更新数据
+  def do_update({:call, _from}, {:inference_end, new_result}, data) do
+    # ...
+
+    # 数据变化：{{_old_segment, _old_result}, {new_segment, input_or_func}} -> {new_segment, new_result}
+    {:next_state, :idle, attach_partial_result_to_data(data, new_result, :done)}
+  end
+
+  # 模型出错
+  def do_update(:cast, {:error, _reason}, _data) do
+    # ...
+
+    # [TODO) Action 改成 stop
+    # 将 {new_segment, input_or_func} 交由 error_handler 处理
+    # {:next_state, :idle, nil}
+  end
+
+  # 推理模型崩溃
+  # 停止应用
+  # def do_store(_reason, _exec, _data) do
+
+  # def AnyState(:inference_crash) do bla bla
+
+  @impl true
+  def terminate(_reason, _current_state, _data) do
+    # ...
+  end
+
+  # 包括出现不可逆错误时停止
+  # 以及正常结束时的清理工作
+
+  ## Same Routine
+
+  defp load_segment_before_send_to_model(
+         from,
+         new_segment,
+         simple_opt_validator,
+         simple_opt_updator,
+         old_data
+       ) do
+    # 确保数据形如 {{_, _}, _}
     data =
       case old_data do
         {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
@@ -365,73 +474,9 @@ defmodule QyCore.Segment.StateM do
     end
   end
 
-  def idle({:call, _from}, {:ready_for_update, _validator, _usability_check}, {%Segment{}, %Segment{}}) do
-    # 这种情况就不变了
-    {:keep_state_and_data, []}
+  defp attach_partial_result_to_data(data, _partial_result, _status) do
+    data
   end
-
-  def idle({:call, _from}, {:ready_for_update, _validator, _usability_check}, {{_, _}, _}) do
-    # 需要通过 validator 来检查新片段是否合法
-    # 是对【模型】而言是否可以运行
-    # 不合法 -> 丢掉新数据
-    # 合法 -> 向推理模型的进程发送消息，确定其是否可用
-    {:keep_state_and_data, []}
-  end
-
-  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
-
-  def required_update({:call, _from}, {:load_segment, _new_segment}, _old_data) do
-    # 可以更改数据
-  end
-
-  # 调用模型，等待结果
-  # 适合用 cast
-  def required_update(:inference_begin) do
-    # ...
-
-    # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
-    {:next_state, :do_update}
-  end
-
-  def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
-
-  def do_update({:call, _from}, {:recieve_partial, _partial_result}, _data) do
-    # ...
-
-    # 数据变化：需要讨论
-    {:keep_state, :newSegmentAndResult}
-  end
-
-  # 得到结果，更新数据
-  def do_update(:inference_end, _new_result) do
-    # ...
-
-    # 数据变化：{{_old_segment, _old_result}, {new_segment, input_or_func}} -> {new_segment, new_result}
-    {:next_state, :idle, :newSegmentAndResult}
-  end
-
-  # 模型出错
-  def do_update(:error, _reason) do
-    # ...
-
-    # [TODO) Action 改成 stop
-    # 将 {new_segment, input_or_func} 交由 error_handler 处理
-    # {:next_state, :idle, nil}
-  end
-
-  # 推理模型崩溃
-  # 停止应用
-  # def do_store(_reason, _exec, _data) do
-
-  # def AnyState(:inference_crash) do bla bla
-
-  @impl true
-  def terminate(_reason, _current_state, _data) do
-    # ...
-  end
-
-  # 包括出现不可逆错误时停止
-  # 以及正常结束时的清理工作
 
   ## Helpers and Private Functions
 

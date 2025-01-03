@@ -14,7 +14,7 @@ defmodule ParamExecutor do
   def inject() do
     # raw to params
     raw()
-    |> Enum.map(fn k, v ->
+    |> Enum.map(fn {k, v} ->
       {k, %Params{type: {:mannual, :element_seq, k}, sequence: v |> Enum.reverse()}}
     end)
     |> Enum.into(%{})
@@ -45,7 +45,8 @@ defmodule ExampleExecutor do
 
   # TODO impl validate and operate
   # Operate 1: 变成一系列单个音符
-  def opt_1(_param_map = %{note: note, note_value: note_value}) when length(note) == length(note_value) do
+  def opt_1(_param_map = %{note: note, note_value: note_value})
+      when length(note) == length(note_value) do
     # TODO
   end
 
