@@ -75,7 +75,7 @@ defmodule QyCore.Segment do
 
   ## 雷同逻辑
 
-  @behaviour Segment.StateM
+  @behaviour Segment.Proto.LoadSegment
 
   @impl true
   def update_or_modify(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do

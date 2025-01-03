@@ -28,6 +28,7 @@ end
 defmodule ExampleExecutor do
   @moduledoc "将音符序列转变成绝对时间下该乐器的基频序列"
   use GenServer
+  use QyCore.Segment.Proto
 
   # @bpm 72.0
   # @beat {4, 4}
@@ -44,7 +45,7 @@ defmodule ExampleExecutor do
 
   # TODO impl validate and operate
   # Operate 1: 变成一系列单个音符
-  def opt_1(_param_map = %{note: _note, note_value: _note_value}) do
+  def opt_1(_param_map = %{note: note, note_value: note_value}) when length(note) == length(note_value) do
     # TODO
   end
 

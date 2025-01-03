@@ -135,12 +135,6 @@ defmodule QyCore.Segment.StateM do
   @typedoc "旧片段与新片段的比较情况，其决定了是否需要调用推理模型"
   @type same_situations :: :required | :update | {:error, term()}
 
-  @doc "更新片段时的回调函数，确定旧片段与新片段的比较逻辑"
-  @callback update_or_modify(Segment.t(), Segment.t()) :: same_situations()
-
-  @doc "如果 update_or_modify/2 返回 :update，那么就会调用这个函数"
-  @callback modifier(Segment.segment_and_result(), Segment.t()) :: Segment.segment_and_result()
-
   @typedoc "状态机返回给发起请求的进程的信息类型"
   @type check_segment_result_msg ::
   {:ok, :required_update} | {:ok, :operate_inference_end} | {:error, term()}
@@ -152,21 +146,16 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "状态机将准备更新模型时获得的事件内容"
   @type ready_update_event_content ::
-          {:ready_for_update, validator :: (Segment.t() -> check_model_usability_msg()), usability_check :: ( -> any())}
-
-  # TODO 确定好相关的逻辑后再确定类型以及 callback
-  # @callback validate_segment_with_model(Segment.t()) :: check_model_usability_msg()
-
-  # @callback usability_check() :: check_model_usability_msg()
+          {:ready_for_update, validator :: (Segment.t() -> model_usability_msg()), usability_check :: ( -> any())}
 
   # 用函数还是直接返回进程的 id ？
   # @callback get_userside_process() :: pid()
 
   @type check_data_status_msg :: :accpet | {:reject, term()}
 
-  @type check_model_usability_msg :: :ok | {:error, term()}
+  @type model_usability_msg :: :ok | {:error, term()}
 
-  @type send_model_status_actions :: {:reply, pid(), check_data_status_msg() | check_model_usability_msg()}
+  @type send_model_status_actions :: {:reply, pid(), check_data_status_msg() | model_usability_msg()}
 
   # 虽然以下动作由状态机与负责推理的模型交互
   # 但是从用户的视角来看，还是来源于状态机的动作
