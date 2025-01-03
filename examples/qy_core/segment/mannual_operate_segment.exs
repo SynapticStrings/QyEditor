@@ -12,6 +12,15 @@ defmodule ParamExecutor do
   @note_value_seq [2, 2, 4, 2, 2, 4, 2, 2, 2, 2, 2, 1, 1, 4]
 
   def inject() do
+    # raw to params
+    raw()
+    |> Enum.map(fn k, v ->
+      {k, %Params{type: {:mannual, :element_seq, k}, sequence: v |> Enum.reverse()}}
+    end)
+    |> Enum.into(%{})
+  end
+
+  def raw() do
     %{note: @note_seq, note_value: @note_value_seq}
   end
 end
@@ -32,24 +41,28 @@ end
 
 # 片段
 id = Segment.random_id()
+
 segment = %Segment{
-  id: {id, :mannual},
-  # params: ParamExecutor.inject(),
+  id: {id, :mannual}
 }
 
 # 创建一个状态机进程
 {:ok, pid} = StateM.start_link(segment)
 
+# 执行一次更新并且输出更新前后的数据
+StateM.get_data(id) |> IO.inspect(label: :data_before_inject)
+
+StateM.load(id, %{segment | params: ParamExecutor.inject()})
+
+StateM.get_data(id) |> IO.inspect(label: :data_after_inject)
+
+# 准备更新
+
+# 执行更新
+
+# 装载到新的片段
+
 if Process.alive?(pid) do
-  # 执行一次更新
-  StateM.update(id, %{segment | params: ParamExecutor.inject()})
-
-  # 准备更新
-
-  # 执行更新
-
-  # 装载到新的片段
-
   # 停止该状态机进程
   StateM.stop(id)
 end

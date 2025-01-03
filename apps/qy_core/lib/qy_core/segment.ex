@@ -21,7 +21,7 @@ defmodule QyCore.Segment do
   # 参数的位置（通常在多步渲染时会被用到）
   @type param_loc :: any()
 
-  @type t :: %__MODULE__{
+  @type t :: nil | %__MODULE__{
           id: id_as_key(),
           offset: number(),
           params: %{param_loc() => QyCore.Params.t()},
@@ -78,6 +78,7 @@ defmodule QyCore.Segment do
   def diff?(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
     if with_same_id?(segment1, segment2) do
       case same_offset?(segment1, segment2) do
+        # TODO 再加上一个条件：序列一致
         true -> :required
         false -> :update
       end
@@ -85,13 +86,15 @@ defmodule QyCore.Segment do
       {:error, :segments_has_not_same_name}
     end
   end
+  # When initial
+  def diff?(nil, _), do: :required
 
-  def diff?(_, _), do: {:error, :isnt_segment}
+  def diff?(_, _), do: {:error, :not_segment}
 
   @spec simple_update(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) ::
           QyCore.Segment.segment_and_result()
-  def simple_update({old_segment, old_result}, new_segment) do
-    {new_segment, %{old_result | offset: old_segment.offset}}
+  def simple_update({_old_segment, old_result}, new_segment) do
+    {new_segment, %{old_result | offset: new_segment.offset}}
   end
 
   ## 其他约束

@@ -21,7 +21,7 @@ defmodule QyCore.Params do
 
   # 参数的通用设置
   @type t :: %__MODULE__{
-          id: any(),
+          # id: any(),
           type: {param_source(), param_type(), param_name()} | nil,
           timestep: number(),
           offset: number(),
@@ -30,7 +30,9 @@ defmodule QyCore.Params do
           extra: map()
         }
   defstruct [
-    :id,
+    # 从 DDD 的角度出发，这属于 Value Object
+    # 所以不需要 id
+    # :id,
     # 参数的 id （因为一个工程不可避免地存在很多个参数）
     type: nil,
     # 参数的类型，包括参数数据的类型以及参数属于的类型

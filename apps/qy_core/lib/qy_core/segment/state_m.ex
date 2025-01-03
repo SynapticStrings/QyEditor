@@ -59,20 +59,22 @@ defmodule QyCore.Segment.StateM do
 
   （需要考虑错误情况吗？）
 
-  ### 状态变化的情景
+  ### 外部事件
 
   一般情景：
 
-  * `:update_segment` 信息更新
+  * `:load_segment` 信息更新
     - 片段与输出不对应且需要通过模型推理获得新片段的结果时
     - 通过调用对应的工具函数来准备可以被推理模型使用的输入
-    - 状态由 `:idle` 变为 `:required_update`
     - `maybe_new_state_and_input` 为新片段
-      - 一般是 `{input, func/1}` 或者 `{input, nil}` ，其中后者的 `nil` 将会在准备推理时被 `model_input` 取代
-      - 其中 `model_input = func.(input)` ，`func` 是一个 arity 的函数，其通过片段得到输入
     - 可能包括不需要调用推理过程的更新
       - 比方说简单的拖拽时间
-      - 状态保持 `:idle` ，但是要更新片段，但也仅仅是更新了片段而已，不需要调用推理
+    - 状态保持 `:idle`
+    - 关于要否单纯更新片段以及调用推理需要结合数据内容中的工具函数的判断
+  * `:ready_for_update`
+      - 数据必须是 {{_, _}, _} 的形式
+      - 对后续的 `maybe_new_state_and_input` 做准备
+      - 状态由 `:idle` 变为 `:required_update`
   * `:update_result` 准备调用模型推理
     - 通过调用对应的工具函数来将片段的数据交由推理模型处理
     - `:required_update` -> `:do_update`
@@ -116,26 +118,22 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机的状态"
   @type states :: :idle | :required_update | :do_update
 
-  @typedoc "一般情况下状态机的状态变化"
-  @type normal_actions :: :update_segment | :opt_segment | :update_result | :done
+  @type events_from_user :: :load_segment | :ready_for_update
 
-  @typedoc "错误处理的有关状态"
-  @type error_actions :: :segment_invalid | :inference_crash
+  @type events_from_model :: :update_result | :recieve_partial | :done | :inference_crash
 
-  @typedoc "状态机的状态变化"
-  @type actions :: normal_actions() | error_actions()
+  @type events :: events_from_user() | events_from_model()
+
+  @type actions_from_segment_stm :: {:reply, pid(), term()}
 
   @typedoc "新状态相关上下文"
   @type maybe_new_state_and_input ::
           {Segment.segment_and_result(), function() | any() | nil}
 
   @typedoc "状态机的数据"
-  @type container ::
+  @type data ::
           Segment.segment_and_result()
           | {Segment.segment_and_result(), maybe_new_state_and_input()}
-
-  @typedoc "状态机保存的所有内容"
-  @type data :: {states(), container()}
 
   ## Mode
 
@@ -148,24 +146,27 @@ defmodule QyCore.Segment.StateM do
 
   # 启动
 
+  @spec start(Segment.t()) :: {:ok, pid()} | {:error, term()}
   def start(init_segment) do
-    {name, container} = preparing_initial(init_segment)
+    {name, data} = preparing_initial(init_segment)
 
     :logger.info("Starting segment state machine: #{inspect(name)}")
 
-    GenStateM.start(name, __MODULE__, {container}, [])
+    GenStateM.start(name, __MODULE__, {data}, [])
   end
 
+  @spec start(Segment.t()) :: {:ok, pid()} | {:error, term()}
   def start_link(init_segment) do
-    {name, container} = preparing_initial(init_segment)
+    {name, data} = preparing_initial(init_segment)
 
     :logger.info("Starting segment state machine: #{inspect(name)}")
 
-    GenStateM.start_link(name, __MODULE__, container, [])
+    GenStateM.start_link(name, __MODULE__, data, [])
   end
 
   # 停止
 
+  @spec stop(pid() | Segment.id()) :: :ok
   def stop(pid) when is_pid(pid), do: do_stop(pid)
 
   def stop(segment_or_id) do
@@ -183,115 +184,103 @@ defmodule QyCore.Segment.StateM do
 
   # 获得数据
 
-  def get_container(segment_id) do
+  @spec get_data(Segment.id()) :: data()
+  def get_data(segment_id) do
     # 这个得重写
-    GenStateM.call(name(segment_id), :get_container)
+    GenStateM.call(name(segment_id), :get_data)
   end
 
-  # def get_segment(segment_id) do
-  # segment_id
-  # |> get_container()
-  # end
+  # 更新片段
 
-  # def get_result(segment_id) do
-  # end
-
-  # def done?(segment_id) do
-  # segment_id
-  # |> get_container()
-  # |> check_done()
-  # end
-
-  # 更新数据
-
-  def update(segment_id, new_segment = %Segment{}, _opts \\ []) do
+  @spec load(Segment.id(), Segment.t()) :: term()
+  def load(segment_id, new_segment = %Segment{}, opts \\ []) do
     # 对 opts 进行处理
-    default_validator = &Segment.diff?/2
-    default_updator = &Segment.simple_update/2
+    default_validator = Keyword.get(opts, :validator, &Segment.diff?/2)
+    default_updator = Keyword.get(opts, :updator, &Segment.simple_update/2)
 
     segment_id
     |> name()
-    |> GenStateM.call({:update_segment, new_segment, default_validator, default_updator})
+    |> GenStateM.call({:load_segment, new_segment, default_validator, default_updator})
   end
 
-  # 用于开始时的更新
-  # def update(segment_id, _opts \\ []), do: GenStateM.cast(name(segment_id), {})
+  # 准备推理
+
+  # def update(segment_id, validator, updator), do: GenStateM.cast(name(segment_id), {})
 
   ## Callbacks
 
   @impl true
-  def init(container) do
+  def init(data) do
     # 进程在启动时不进行状态更新
-    {:ok, :idle, container}
+    {:ok, :idle, data}
   end
 
   # 获得状态机的数据
   # 本质上是一个发送消息的 Action
   defp exec_send_data(from, data) do
-    IO.inspect(from, label: :from)
     # Send current data to `from`
+    send_action = [{:reply, from, data}]
 
-    {:keep_state, data}
+    {:keep_state_and_data, send_action}
   end
 
   # 获得状态机的数据
-  def idle({:call, from}, :get_container, data), do: exec_send_data(from, data)
+  def idle({:call, from}, :get_data, data), do: exec_send_data(from, data)
 
   # 准备推理模型的输入
   def idle(
-        {:call, _from},
-        {:update_segment, new_segment, simple_opt_validator, simple_opt_updator},
-        old_container
+        {:call, from},
+        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
+        old_data
       ) do
-    container =
-      case old_container do
-        {_mannual_segment = %Segment{}, _generated_segment} -> {old_container, new_segment}
+    data =
+      case old_data do
+        {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
         # 直接更新就好啦
         {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
+        {old_pair = {nil, nil}, _any} -> {old_pair, new_segment}
       end
 
     # 检查是否是简单的更新
-    {{old_segment, _old_result}, _maybe_new_result} = container
+    {{old_segment, old_result}, _maybe_new_segment} = data
 
     case segment_infer?(old_segment, new_segment, simple_opt_validator) do
       :required ->
-        :logger.info("Updating segment and required inference: #{inspect(container)}")
+        :logger.info("Updating segment and required inference: #{inspect(data)}")
 
-        # TODO 向进程来源的地方发送消息，说明需要后续的步骤
+        actions = [{:reply, from, {:ok, :required_update}}]
 
-        {:next_state, :required_update, container}
+        {:keep_state, data, actions}
 
       :update ->
         :logger.info(
-          "Updating segment: #{do_simple_update(old_segment, new_segment, simple_opt_updator) |> inspect}"
+          "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
         )
 
-        # TODO 向进程来源的地方发送消息，说明是简单的更新
+        actions = [{:reply, from, {:ok, :operate_done}}]
 
         # 直接更新数据
-        {:keep_state, do_simple_update(old_container, new_segment, simple_opt_updator)}
+        {:keep_state, do_simple_update(old_data, new_segment, simple_opt_updator), actions}
 
       # 发送错误信息
       {:error, reason} ->
         :logger.warning("Segment update error cause #{inspect(reason)}")
-        # TODO send event
+
+        actions = [{:reply, from, {:error, reason}}]
 
         # 保持原来的数据
-        {:keep_state, old_container}
+        {:keep_state, old_data, actions}
     end
   end
 
-  defp segment_infer?(old_segment, new_segment, validator) when is_function(validator, 2) do
-    validator.(old_segment, new_segment)
+  def idle({:call, _from}, {:ready_for_update, _validator}, {_, _}) do
+    # 保持原来的数据
+    {:keep_state_and_data, []}
   end
 
-  defp do_simple_update(old_container, new_segment, updator) do
-    updator.(old_container, new_segment)
-  end
+  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
 
-  def required_update({:call, from}, :get_container, data), do: exec_send_data(from, data)
-
-  def required_update({:call, _from}, {:update_segment, _new_segment}, _old_container) do
+  def required_update({:call, _from}, {:load_segment, _new_segment}, _old_data) do
     # 可以更改数据
   end
 
@@ -304,9 +293,9 @@ defmodule QyCore.Segment.StateM do
     {:next_state, :do_update}
   end
 
-  def do_update({:call, from}, :get_container, data), do: exec_send_data(from, data)
+  def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
 
-  def do_update(:recieve_partial, _partial_result) do
+  def do_update({:call, _from}, {:recieve_partial, _partial_result}, _data) do
     # ...
 
     # 数据变化：需要讨论
@@ -332,7 +321,7 @@ defmodule QyCore.Segment.StateM do
 
   # 推理模型崩溃
   # 停止应用
-  # def do_store(_reason, _exec, _container) do
+  # def do_store(_reason, _exec, _data) do
 
   # def AnyState(:inference_crash) do bla bla
 
@@ -351,10 +340,16 @@ defmodule QyCore.Segment.StateM do
   defp name(id), do: {:global, {:segment, id}}
 
   defp preparing_initial(initial_segment = %Segment{id: segment_id}) do
-    # [TODO) prepare function tools.
-    {segment_id |> Segment.purely_id() |> name(), {{%Segment{}, %Segment{}}, initial_segment}}
+    {segment_id |> Segment.purely_id() |> name(), {{nil, nil}, initial_segment}}
   end
 
-  # defp check_done({{_mannual_segment, _generated_segment}, _}), do: false
-  # defp check_done({_mannual_segment, _generated_segment}), do: true
+  # 在 load_segment/3 会被用到的函数
+
+  defp segment_infer?(old_segment, new_segment, validator) when is_function(validator, 2) do
+    validator.(old_segment, new_segment)
+  end
+
+  defp do_simple_update(old_data, new_segment, updator) do
+    updator.(old_data, new_segment)
+  end
 end
