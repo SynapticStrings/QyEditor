@@ -121,7 +121,7 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机将获得数据时获得的事件内容"
   @type get_data :: :get_data
 
-  @type send_data_action :: {:reply, pid(), term()}
+  @type send_data_action :: {:reply, pid(), data()}
 
   # load_segment 事件
 
@@ -145,16 +145,22 @@ defmodule QyCore.Segment.StateM do
   # ready_for_update 事件
 
   @typedoc "状态机将准备更新模型时获得的事件内容"
-  @type ready_update_event_content ::
+  @type ready_for_update_event_content ::
           {:ready_for_update, validator :: (Segment.t() -> model_usability_msg()),
-           usability_check :: (-> any())}
+           usability_check :: (-> model_usability_msg())}
 
   @type check_data_status_msg :: :accpet | {:reject, term()}
 
   @type model_usability_msg :: :ok | {:error, term()}
 
+  @type send_model_and_segment_msg ::
+          {:ok, :required_update}
+          | {:error, :segment_not_valid}
+          | {:error, :model_not_usable}
+          | {:error, :no_new_segment}
+
   @type send_model_status_actions ::
-          {:reply, pid(), check_data_status_msg() | model_usability_msg()}
+          {:reply, pid(), send_model_and_segment_msg()}
 
   # 虽然以下动作由状态机与负责推理的模型交互
   # 但是从用户的视角来看，还是来源于状态机的动作
@@ -186,6 +192,8 @@ defmodule QyCore.Segment.StateM do
 
   # inference_begin 事件
 
+  @type inference_begin_event :: :inference_begin
+
   # recieve_partial 事件
 
   # inference_end 事件
@@ -194,7 +202,7 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "状态机被动接受事件的事件内容"
   @type events_from_user ::
-          load_segment_event_content() | ready_update_event_content() | get_data()
+          load_segment_event_content() | ready_for_update_event_content() | get_data()
 
   @typedoc "来自状态机发起请求业务时接收的事件的内容"
   @type events_from_model ::
@@ -210,10 +218,13 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机的动作"
   @type actions_from_segment_stm :: send_data_action() | send_model_status_actions()
 
-  @typedoc "新状态相关上下文"
-  @type maybe_new_state_and_input :: any()
+  @typedoc "新状态相关上下文：新片段/新片段+调用状态机的进程（用于对其发消息使用）/新片段+调用状态机的进程+其他"
+  @type maybe_new_state_and_input ::
+          Segment.t() | {Segment.t(), pid()} | {Segment.t(), pid(), any()}
 
+  ################################
   ## Mode
+  ################################
 
   @impl true
   def callback_mode(),
@@ -221,7 +232,9 @@ defmodule QyCore.Segment.StateM do
     # 需要需要每次进入状态就有检查的话那就改成 [:state_functions, :enter_state]
     do: :state_functions
 
+  ################################
   ## Public API
+  ################################
 
   # 启动
 
@@ -281,12 +294,19 @@ defmodule QyCore.Segment.StateM do
 
   # 更新片段
 
-  @spec load(Segment.id(), Segment.t()) :: term()
-  def load(segment_id, new_segment = %Segment{}, opts \\ []) do
-    # 对 opts 进行处理
-    update_or_modify = Keyword.get(opts, :update_or_modify, &Segment.update_or_modify/2)
-    modifier = Keyword.get(opts, :modifier, &Segment.modifier/2)
-
+  @spec load(
+          Segment.id(),
+          Segment.t(),
+          (Segment.t(), Segment.t() -> same_situations()),
+          (Segment.segment_and_result(), Segment.t() ->
+             Segment.segment_and_result())
+        ) :: any()
+  def load(
+        segment_id,
+        new_segment = %Segment{},
+        update_or_modify \\ &Segment.update_or_modify/2,
+        modifier \\ &Segment.modifier/2
+      ) do
     segment_id
     |> name()
     |> GenStateM.call({:load_segment, new_segment, update_or_modify, modifier})
@@ -294,9 +314,18 @@ defmodule QyCore.Segment.StateM do
 
   # 准备推理
 
-  def update(segment_id, _validator, _updator), do: GenStateM.cast(name(segment_id), {})
+  @spec update(Segment.id(), (Segment.t() -> model_usability_msg()), (-> model_usability_msg())) ::
+          any()
+  def update(segment_id, validator, usability_check),
+    do: GenStateM.call(name(segment_id), {:ready_for_update, validator, usability_check})
 
+  # 添加结果
+
+  def attach(segment_id, result, role), do: GenStateM.cast(name(segment_id), {result, role})
+
+  ################################
   ## Callbacks
+  ################################
 
   @impl true
   def init(data) do
@@ -305,23 +334,16 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 获得状态机的数据
-  # 本质上是一个发送消息的 Action
-  defp exec_send_data(from, data) do
-    # Send current data to `from`
-    send_action = [{:reply, from, data}]
-
-    {:keep_state_and_data, send_action}
-  end
-
-  # 获得状态机的数据
   @spec idle(
-          {:call, any()},
-          # | ready_update_event_content(),
-          get_data() | load_segment_event_content(),
+          {:call, pid()},
+          get_data()
+          | load_segment_event_content()
+          | ready_for_update_event_content(),
           data()
         ) ::
           {:keep_state_and_data, [send_data_action()]}
           | {:keep_state, data(), [send_load_status()]}
+          | {:next_state, :required_update, data(), [send_load_status()]}
   def idle({:call, from}, :get_data, data), do: exec_send_data(from, data)
 
   # 准备推理模型的输入
@@ -344,18 +366,61 @@ defmodule QyCore.Segment.StateM do
         {:ready_for_update, _validator, _usability_check},
         {%Segment{}, %Segment{}}
       ) do
+    # 没有新片段你调用个啥
+    actions = [{:error, :no_new_segment}]
+
     # 这种情况就不变了
-    {:keep_state_and_data, []}
+    {:keep_state_and_data, actions}
   end
 
-  def idle({:call, _from}, {:ready_for_update, _validator, _usability_check}, {{_, _}, _}) do
-    # 需要通过 validator 来检查新片段是否合法
-    # 是对【模型】而言是否可以运行
-    # 不合法 -> 丢掉新数据
-    # 合法 -> 向推理模型的进程发送消息，确定其是否可用
-    {:keep_state_and_data, []}
+  def idle(
+        {:call, from},
+        {:ready_for_update, validator, usability_check},
+        {old_pair = {_, _}, new_segment}
+      ) do
+    with segment_valid <- segment_valid?(validator, new_segment),
+         model_useable <- usable?(usability_check, nil) do
+      case {segment_valid, model_useable} do
+        {{:reject, _term}, _} ->
+          # 不合法 -> 丢掉新数据
+          actions = [{:reply, from, {:error, :segment_not_valid}}]
+
+          :logger.info("Segment is not valid")
+
+          {:keep_state, old_pair, actions}
+
+        {:accept, :ok} ->
+          # 可用 -> 下一步
+          actions = [{:reply, from, {:ok, :required_update}}]
+
+          :logger.info("Segment is ready for update")
+
+          # 可能还需要干一件事情，保留 from 进程信息以便后续发送消息
+          {:next_state, :required_update, {old_pair, {new_segment, from}}, actions}
+
+        {:accept, _} ->
+          # 不可用 -> 返回忙碌动作
+          actions = [{:reply, from, {:error, :model_not_usable}}]
+
+          :logger.info("Model is not usable")
+
+          {:keep_state_and_data, actions}
+      end
+    end
   end
 
+  @spec required_update(
+          :cast | {:call, pid()},
+          get_data()
+          | load_segment_event_content()
+          | ready_for_update_event_content()
+          | {:inference_begin, any()},
+          data()
+        ) ::
+          {:keep_state_and_data, [send_data_action()]}
+          | {:keep_state, data(), [send_load_status()]}
+          | {:next_state, :do_update, data(), [send_model_status_actions()]}
+          | {:next_state, :idle, data(), [send_model_status_actions()]}
   def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
 
   def required_update(
@@ -374,14 +439,39 @@ defmodule QyCore.Segment.StateM do
     )
   end
 
+  def required_update(
+        {:call, from},
+        {:ready_for_update, _validator, usability_check},
+        {{_, _}, _} = old_segments
+      ) do
+    # 不需要做任何更新
+    # 仅有一个事件：确定模型可用性
+    case usable?(usability_check, nil) do
+      :ok ->
+        # 可用 -> 继续等待
+        {:keep_state_and_data, []}
+
+      _usable_status ->
+        # 不可用 -> 返回 idle
+        actions = [{:reply, from, {:error, :model_not_usable}}]
+
+        {:next_state, :idle, old_segments, actions}
+    end
+  end
+
   # 调用模型，等待结果
   # 适合用 cast
-  def required_update(:cast, {:inference_begin, _some_func}, {{old_segment, old_result}, new_segment}) do
+  # 这个是模型而非用户的进程发送的请求
+  def required_update(
+        :cast,
+        {:inference_begin, _send_input_func},
+        {{old_segment, old_result}, new_segment}
+      ) do
     # ...
 
     # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
     # 数据增加额外的上下文
-    {:next_state, :do_update, {{old_segment, old_result}, new_segment}}
+    {:next_state, :do_update, {{old_segment, old_result}, new_segment}, []}
   end
 
   def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
@@ -410,22 +500,28 @@ defmodule QyCore.Segment.StateM do
     # {:next_state, :idle, nil}
   end
 
-  # 推理模型崩溃
-  # 停止应用
-  # def do_store(_reason, _exec, _data) do
-
-  # def AnyState(:inference_crash) do bla bla
-
   @impl true
-  def terminate(_reason, _current_state, _data) do
-    # ...
+  def terminate(reason, _current_state, _data) do
+    :logger.info("Segment state machine terminated with #{inspect(reason)}")
   end
 
   # 包括出现不可逆错误时停止
   # 以及正常结束时的清理工作
 
+  ################################
   ## Same Routine
+  ################################
 
+  # 获得状态机的数据
+  # 本质上是一个发送消息的 Action
+  defp exec_send_data(from, data) do
+    # Send current data to `from`
+    send_action = [{:reply, from, data}]
+
+    {:keep_state_and_data, send_action}
+  end
+
+  # 装载新片段的过程
   defp load_segment_before_send_to_model(
          from,
          new_segment,
@@ -474,11 +570,20 @@ defmodule QyCore.Segment.StateM do
     end
   end
 
-  defp attach_partial_result_to_data(data, _partial_result, _status) do
+  # 更新结果时会被用到的函数
+  defp attach_partial_result_to_data(data, partial_result, status) do
     data
+    |> load_new_result(partial_result)
+    |> maybe_release_context(status)
   end
 
+  defp load_new_result(data, _partial_result), do: data
+
+  defp maybe_release_context(data, _status), do: data
+
+  ################################
   ## Helpers and Private Functions
+  ################################
 
   # 常用函数
 
@@ -487,17 +592,32 @@ defmodule QyCore.Segment.StateM do
   # 准备初始数据
 
   defp preparing_initial(initial_segment = %Segment{id: segment_id}) do
-    {segment_id |> Segment.purely_id() |> name(), {{nil, nil}, initial_segment}}
+    {segment_id |> Segment.purely_id() |> name(),
+     {{%Segment{id: segment_id}, %Segment{id: segment_id}}, initial_segment}}
   end
 
-  # 在 idle/3 的 load_segments 事件下会被用到的函数
+  # 在 idle 以及 required_update 的 load_segments 事件下会被用到的函数
 
   defp segment_infer?(old_segment, new_segment, update_or_modify_validator)
        when is_function(update_or_modify_validator, 2) do
     update_or_modify_validator.(old_segment, new_segment)
   end
 
-  defp do_simple_update(old_data, new_segment, modifier) do
+  defp do_simple_update(old_data, new_segment, modifier) when is_function(modifier, 2) do
     modifier.(old_data, new_segment)
   end
+
+  # 在 idle 的 ready_for_update 事件下会被用到的函数
+
+  defp segment_valid?(validator, segment) when is_function(validator, 1) do
+    validator.(segment)
+  end
+
+  defp usable?(func, _context) when is_function(func, 0) do
+    func.()
+  end
+
+  # defp usable?(func, context) when is_function(func, 1) do
+  #   func.(context)
+  # end
 end

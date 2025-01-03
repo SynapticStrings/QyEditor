@@ -28,7 +28,19 @@ end
 defmodule ExampleExecutor do
   @moduledoc "将音符序列转变成绝对时间下该乐器的基频序列"
   use GenServer
-  use QyCore.Segment.Proto
+  use QyCore.Segment.Proto, enabled: [:load_segment, :executor]
+
+  def validate_segment_with_model(segment = %Segment{}) do
+    # TODO
+    :accept
+  end
+  def validate_segment_with_model(_segment), do: {:error, :unknow_error}
+
+  def usability_check, do: :ok
+
+  def execute_inference(_segment) do
+    # TODO
+  end
 
   # @bpm 72.0
   # @beat {4, 4}
@@ -85,6 +97,7 @@ StateM.get_data(id) |> IO.inspect(label: :data_after_inject)
 # {:ok, model_pid} = ExampleExecutor.start_link(nil)
 
 # 准备更新
+StateM.update(id, fn _ -> :accept end, fn -> :ok end)
 
 # 执行更新
 
