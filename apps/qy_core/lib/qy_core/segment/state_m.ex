@@ -29,19 +29,7 @@ defmodule QyCore.Segment.StateM do
 
   ### 工具函数
 
-  主要负责检查、准备模型可用的输入、调用模型、错误处理等方面。
-
-  （可以作为 event_content 的上下文引入）
-
-  * `validate/1`
-    - 检查数据（片段）是否合法
-    - 返回格式 `{:ok, data}` 或者 `{:error, reason}`
-  * `invoke/1`
-    - 调用推理模型，其接受【模型的】输入
-  * `error_handler/2`
-    - 输入 `{:error, reason}, context`
-    - 决定结束状态机并返回报错信息还是其他
-  * `persist/1` 持久化保存
+  主要负责检查、准备模型可用的输入、调用模型、错误处理等方面。作为 event_content 的上下文引入。
 
   ### 新状态上下文（`maybe_new_state_and_input`）
 
@@ -75,14 +63,14 @@ defmodule QyCore.Segment.StateM do
       - 数据必须是 {{_, _}, _} 的形式
       - 对后续的 `maybe_new_state_and_input` 做准备
       - 状态由 `:idle` 变为 `:required_update`
-  * `:update_result` 准备调用模型推理
+  * `:inference_begin` 准备调用模型推理
     - 通过调用对应的工具函数来将片段的数据交由推理模型处理
     - `:required_update` -> `:do_update`
   * `:recieve_partial` 得到部分结果
     - 一般是模型的输出是部分的，需要继续等待
     - `:do_update` -> `:required_update`
     - 递归性地更新结果
-  * `:done` 得到结果，固定新的（Segment 与输出）
+  * `:inference_end` 得到结果，固定新的（Segment 与输出）
     - `:do_update` -> `:idle`
     - [TODO) 需要深入讨论可能会修改 Segment 本身的情况（例如音高参数，其既可以由模型生成，有可能被手动修改）
   * `:update_infer_graph` 模型更新
@@ -91,7 +79,6 @@ defmodule QyCore.Segment.StateM do
 
   错误处理：
 
-  * `segment_invalid` 状态存在非法数据
   * `inference_crash` 推理过程出现崩溃
 
   把 `:required_update` 和 `:do_update` 两个状态分开，
@@ -118,28 +105,127 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机的状态"
   @type states :: :idle | :required_update | :do_update
 
-  @type events_from_user :: :load_segment | :ready_for_update
-
-  @type events_from_model :: :update_result | :recieve_partial | :done | :inference_crash
-
-  @type events :: events_from_user() | events_from_model()
-
-  @type actions_from_segment_stm :: {:reply, pid(), term()}
-
-  @typedoc "新状态相关上下文"
-  @type maybe_new_state_and_input ::
-          {Segment.segment_and_result(), function() | any() | nil}
-
   @typedoc "状态机的数据"
   @type data ::
           Segment.segment_and_result()
           | {Segment.segment_and_result(), maybe_new_state_and_input()}
+
+  ## Outie Types and Callbacks
+  # format:
+  # type with events
+  # callbacks
+  # type with actions
+
+  # get_data 事件
+
+  @typedoc "状态机将获得数据时获得的事件内容"
+  @type get_data :: :get_data
+
+  @type send_data_action :: {:reply, pid(), term()}
+
+  # load_segment 事件
+
+  @typedoc "状态机将更新片段时获得的事件内容"
+  @type load_segment_event_content ::
+          {:load_segment, new_segment :: Segment.t(),
+           update_or_modify :: (Segment.t(), Segment.t() -> same_situations()),
+           modifier :: (Segment.segment_and_result(), Segment.t() ->
+                          Segment.segment_and_result())}
+
+  @typedoc "旧片段与新片段的比较情况，其决定了是否需要调用推理模型"
+  @type same_situations :: :required | :update | {:error, term()}
+
+  @doc "更新片段时的回调函数，确定旧片段与新片段的比较逻辑"
+  @callback update_or_modify(Segment.t(), Segment.t()) :: same_situations()
+
+  @doc "如果 update_or_modify/2 返回 :update，那么就会调用这个函数"
+  @callback modifier(Segment.segment_and_result(), Segment.t()) :: Segment.segment_and_result()
+
+  @typedoc "状态机返回给发起请求的进程的信息类型"
+  @type check_segment_result_msg ::
+  {:ok, :required_update} | {:ok, :operate_inference_end} | {:error, term()}
+
+  @typedoc "状态机将更新片段时返回给发起请求的进程的完整信息"
+  @type send_load_status :: {:reply, pid(), check_segment_result_msg()}
+
+  # ready_for_update 事件
+
+  @typedoc "状态机将准备更新模型时获得的事件内容"
+  @type ready_update_event_content ::
+          {:ready_for_update, validator :: (Segment.t() -> check_model_usability_msg()), usability_check :: ( -> any())}
+
+  # TODO 确定好相关的逻辑后再确定类型以及 callback
+  # @callback validate_segment_with_model(Segment.t()) :: check_model_usability_msg()
+
+  # @callback usability_check() :: check_model_usability_msg()
+
+  # 用函数还是直接返回进程的 id ？
+  # @callback get_userside_process() :: pid()
+
+  @type check_data_status_msg :: :accpet | {:reject, term()}
+
+  @type check_model_usability_msg :: :ok | {:error, term()}
+
+  @type send_model_status_actions :: {:reply, pid(), check_data_status_msg() | check_model_usability_msg()}
+
+  # 虽然以下动作由状态机与负责推理的模型交互
+  # 但是从用户的视角来看，还是来源于状态机的动作
+  # 其大致逻辑如下（没有考虑失败以及错误捕捉的情况）
+  #
+  # +------+                       +--------+                  +-------+
+  # | User | -------update-------> | StateM |                  | Model |
+  # +------+                       +--------+                  +-------+
+  #    |                               |        validator         |
+  #    |                               |  -and-usability_check->  |-do_check\
+  #    |                               |                          |<--------/
+  #    |                               |    <--accept-and-ok--    |
+  #    |      <--ready_for_update-     |                          |
+  #    |                               |                          * when free
+  #    |                               |   <--inference_begin--   |
+  #    |                               |        --data--->        |
+  #    |                               |                          |-do_inference-\
+  #    |                               |                          |<-------------/
+  #    |                               |   <--recieve_partial-    |
+  #    |        <--updated--           |                          |
+  #    |             ...               |          ...             |
+  #    |                               |   <--inference_end--     |
+  #    |        <---done---            |                          |
+  #    |                               * to idle                  |
+  #
+  # 可以看到，后续用户的进程会受到来自状态机的消息，哪怕并没有相关的命令
+  # 故此写在这里
+  # TODO
+
+  # inference_begin 事件
+
+  # recieve_partial 事件
+
+  # inference_end 事件
+
+  ## 其他类型
+
+  @typedoc "状态机被动接受事件的事件内容"
+  @type events_from_user :: load_segment_event_content() | ready_update_event_content() | get_data()
+
+  @typedoc "来自状态机发起请求业务时接收的事件的内容"
+  @type events_from_model ::
+          :inference_begin | :recieve_partial | :inference_end | :could_not_fetch_model | :inference_crash
+
+  @typedoc "状态机的事件集合"
+  @type events :: events_from_user() | events_from_model()
+
+  @typedoc "状态机的动作"
+  @type actions_from_segment_stm :: send_data_action() | send_model_status_actions()
+
+  @typedoc "新状态相关上下文"
+  @type maybe_new_state_and_input :: any()
 
   ## Mode
 
   @impl true
   def callback_mode(),
     # 简单来说就是把状态名当成函数
+    # 需要需要每次进入状态就有检查的话那就改成 [:state_functions, :enter_state]
     do: :state_functions
 
   ## Public API
@@ -195,17 +281,17 @@ defmodule QyCore.Segment.StateM do
   @spec load(Segment.id(), Segment.t()) :: term()
   def load(segment_id, new_segment = %Segment{}, opts \\ []) do
     # 对 opts 进行处理
-    default_validator = Keyword.get(opts, :validator, &Segment.diff?/2)
-    default_updator = Keyword.get(opts, :updator, &Segment.simple_update/2)
+    update_or_modify = Keyword.get(opts, :update_or_modify, &Segment.update_or_modify/2)
+    modifier = Keyword.get(opts, :modifier, &Segment.modifier/2)
 
     segment_id
     |> name()
-    |> GenStateM.call({:load_segment, new_segment, default_validator, default_updator})
+    |> GenStateM.call({:load_segment, new_segment, update_or_modify, modifier})
   end
 
   # 准备推理
 
-  # def update(segment_id, validator, updator), do: GenStateM.cast(name(segment_id), {})
+  def update(segment_id, _validator, _updator), do: GenStateM.cast(name(segment_id), {})
 
   ## Callbacks
 
@@ -225,6 +311,13 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 获得状态机的数据
+  @spec idle(
+          {:call, any()},
+          get_data() | load_segment_event_content(), # | ready_update_event_content(),
+          data()
+        ) ::
+          {:keep_state_and_data, [send_data_action()]}
+          | {:keep_state, data(), [send_load_status()]}
   def idle({:call, from}, :get_data, data), do: exec_send_data(from, data)
 
   # 准备推理模型的输入
@@ -257,7 +350,7 @@ defmodule QyCore.Segment.StateM do
           "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
         )
 
-        actions = [{:reply, from, {:ok, :operate_done}}]
+        actions = [{:reply, from, {:ok, :operate_inference_end}}]
 
         # 直接更新数据
         {:keep_state, do_simple_update(old_data, new_segment, simple_opt_updator), actions}
@@ -273,8 +366,16 @@ defmodule QyCore.Segment.StateM do
     end
   end
 
-  def idle({:call, _from}, {:ready_for_update, _validator}, {_, _}) do
-    # 保持原来的数据
+  def idle({:call, _from}, {:ready_for_update, _validator, _usability_check}, {%Segment{}, %Segment{}}) do
+    # 这种情况就不变了
+    {:keep_state_and_data, []}
+  end
+
+  def idle({:call, _from}, {:ready_for_update, _validator, _usability_check}, {{_, _}, _}) do
+    # 需要通过 validator 来检查新片段是否合法
+    # 是对【模型】而言是否可以运行
+    # 不合法 -> 丢掉新数据
+    # 合法 -> 向推理模型的进程发送消息，确定其是否可用
     {:keep_state_and_data, []}
   end
 
@@ -286,7 +387,7 @@ defmodule QyCore.Segment.StateM do
 
   # 调用模型，等待结果
   # 适合用 cast
-  def required_update(:update_result) do
+  def required_update(:inference_begin) do
     # ...
 
     # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
@@ -303,7 +404,7 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 得到结果，更新数据
-  def do_update(:done, _new_result) do
+  def do_update(:inference_end, _new_result) do
     # ...
 
     # 数据变化：{{_old_segment, _old_result}, {new_segment, input_or_func}} -> {new_segment, new_result}
@@ -333,23 +434,26 @@ defmodule QyCore.Segment.StateM do
   # 包括出现不可逆错误时停止
   # 以及正常结束时的清理工作
 
-  # def handle_event
+  ## Helpers and Private Functions
 
-  ## Inner API and Helpers
+  # 常用函数
 
   defp name(id), do: {:global, {:segment, id}}
+
+  # 准备初始数据
 
   defp preparing_initial(initial_segment = %Segment{id: segment_id}) do
     {segment_id |> Segment.purely_id() |> name(), {{nil, nil}, initial_segment}}
   end
 
-  # 在 load_segment/3 会被用到的函数
+  # 在 idle/3 的 load_segments 事件下会被用到的函数
 
-  defp segment_infer?(old_segment, new_segment, validator) when is_function(validator, 2) do
-    validator.(old_segment, new_segment)
+  defp segment_infer?(old_segment, new_segment, update_or_modify_validator)
+       when is_function(update_or_modify_validator, 2) do
+    update_or_modify_validator.(old_segment, new_segment)
   end
 
-  defp do_simple_update(old_data, new_segment, updator) do
-    updator.(old_data, new_segment)
+  defp do_simple_update(old_data, new_segment, modifier) do
+    modifier.(old_data, new_segment)
   end
 end

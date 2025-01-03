@@ -27,9 +27,20 @@ end
 
 defmodule ExampleExecutor do
   @moduledoc "将音符序列转变成绝对时间下该乐器的基频序列"
+  # use GenServer
 
   # @bpm 72.0
   # @beat {4, 4}
+
+  def init(_args) do
+    # TODO
+    {:ok, nil}
+  end
+
+  def handle_call(:operate, _from, state) do
+    # TODO
+    {:reply, :ok, state}
+  end
 
   # TODO impl validate and operate
   # Operate 1: 变成一系列单个音符
@@ -47,7 +58,7 @@ segment = %Segment{
 }
 
 # 创建一个状态机进程
-{:ok, pid} = StateM.start_link(segment)
+{:ok, state_pid} = StateM.start_link(segment)
 
 # 执行一次更新并且输出更新前后的数据
 StateM.get_data(id) |> IO.inspect(label: :data_before_inject)
@@ -56,13 +67,16 @@ StateM.load(id, %{segment | params: ParamExecutor.inject()})
 
 StateM.get_data(id) |> IO.inspect(label: :data_after_inject)
 
+# 创建推理模型进程
+# {:ok, model_pid} = ExampleExecutor.start_link(nil)
+
 # 准备更新
 
 # 执行更新
 
 # 装载到新的片段
 
-if Process.alive?(pid) do
+if Process.alive?(state_pid) do
   # 停止该状态机进程
   StateM.stop(id)
 end

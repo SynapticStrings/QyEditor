@@ -4,6 +4,7 @@ defmodule QyCore.Segment do
 
   关于对段落的状态管理，请参见 `QyCore.Segment.StateM`
   """
+  alias QyCore.{Segment, Params}
 
   @type id :: binary()
 
@@ -16,7 +17,7 @@ defmodule QyCore.Segment do
   # 最好保持一致
   @type id_as_key :: {id(), role()}
 
-  @type segment_and_result :: {QyCore.Segment.t(), any()}
+  @type segment_and_result :: {Segment.t(), any()} | {nil, nil}
 
   # 参数的位置（通常在多步渲染时会被用到）
   @type param_loc :: any()
@@ -24,7 +25,7 @@ defmodule QyCore.Segment do
   @type t :: nil | %__MODULE__{
           id: id_as_key(),
           offset: number(),
-          params: %{param_loc() => QyCore.Params.t()},
+          params: %{param_loc() => Params.t()},
           comments: any()
         }
   defstruct [
@@ -73,9 +74,10 @@ defmodule QyCore.Segment do
 
   ## 雷同逻辑
 
-  # 简单来说有两类修改：需要调用模型得到新结果和不需要，其引发了不同的情景
-  @spec diff?(QyCore.Segment.t(), QyCore.Segment.t()) :: :required | :update | {:error, term()}
-  def diff?(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
+  @behaviour Segment.StateM
+
+  @impl true
+  def update_or_modify(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
     if with_same_id?(segment1, segment2) do
       case same_offset?(segment1, segment2) do
         # TODO 再加上一个条件：序列一致
@@ -87,13 +89,12 @@ defmodule QyCore.Segment do
     end
   end
   # When initial
-  def diff?(nil, _), do: :required
+  def update_or_modify(nil, _), do: :required
 
-  def diff?(_, _), do: {:error, :not_segment}
+  def update_or_modify(_, _), do: {:error, :not_segment}
 
-  @spec simple_update(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) ::
-          QyCore.Segment.segment_and_result()
-  def simple_update({_old_segment, old_result}, new_segment) do
+  @impl true
+  def modifier({_old_segment, old_result}, new_segment) do
     {new_segment, %{old_result | offset: new_segment.offset}}
   end
 
