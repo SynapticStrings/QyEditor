@@ -121,7 +121,9 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机将获得数据时获得的事件内容"
   @type get_data :: :get_data
 
-  @type send_data_action :: {:reply, pid(), data()}
+  @type data_and_state() :: {states(), data()}
+
+  @type send_data_action :: {:reply, pid(), data_and_state()}
 
   # load_segment 事件
 
@@ -344,7 +346,7 @@ defmodule QyCore.Segment.StateM do
           {:keep_state_and_data, [send_data_action()]}
           | {:keep_state, data(), [send_load_status()]}
           | {:next_state, :required_update, data(), [send_load_status()]}
-  def idle({:call, from}, :get_data, data), do: exec_send_data(from, data)
+  def idle({:call, from}, :get_data, data), do: exec_send_data(from, data, :idle)
 
   # 准备推理模型的输入
   def idle(
@@ -421,7 +423,7 @@ defmodule QyCore.Segment.StateM do
           | {:keep_state, data(), [send_load_status()]}
           | {:next_state, :do_update, data(), [send_model_status_actions()]}
           | {:next_state, :idle, data(), [send_model_status_actions()]}
-  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
+  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :required_update)
 
   def required_update(
         {:call, from},
@@ -474,7 +476,7 @@ defmodule QyCore.Segment.StateM do
     {:next_state, :do_update, {{old_segment, old_result}, new_segment}, []}
   end
 
-  def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data)
+  def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :do_update)
 
   def do_update(:cast, {:recieve_partial, partial_result}, data) do
     # ...
@@ -514,9 +516,9 @@ defmodule QyCore.Segment.StateM do
 
   # 获得状态机的数据
   # 本质上是一个发送消息的 Action
-  defp exec_send_data(from, data) do
+  defp exec_send_data(from, data, state) do
     # Send current data to `from`
-    send_action = [{:reply, from, data}]
+    send_action = [{:reply, from, {state, data}}]
 
     {:keep_state_and_data, send_action}
   end
