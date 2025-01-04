@@ -182,7 +182,7 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "状态机返回给发起请求的进程的信息类型"
   @type check_segment_result_msg ::
-          {:ok, :required_update} | {:ok, :operate_inference_end} | {:error, term()}
+          {:ok, :required_update} | {:ok, :operate_segment_end} | {:error, term()}
 
   @typedoc "状态机将更新片段时返回给发起请求的进程的完整信息"
   @type send_load_status :: {:reply, pid(), check_segment_result_msg()}
@@ -636,7 +636,7 @@ defmodule QyCore.Segment.StateM do
           "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
         )
 
-        actions = [{:reply, from, {:ok, :operate_inference_end}}]
+        actions = [{:reply, from, {:ok, :operate_segment_end}}]
 
         # 直接更新数据
         {:keep_state, do_simple_update(old_data, new_segment, simple_opt_updator), actions}
