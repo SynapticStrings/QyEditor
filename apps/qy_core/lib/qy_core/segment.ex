@@ -6,8 +6,10 @@ defmodule QyCore.Segment do
   """
   alias QyCore.{Segment, Params}
 
+  @typedoc "片段的唯一标识符"
   @type id :: binary()
 
+  @typedoc "片段的角色，通常是该片段的来源"
   @type role :: :mannual | :generated
 
   # 使用这种方式命名的原因是为了避免可能存在的将片段的 id 作为字典的键，但是
@@ -17,9 +19,10 @@ defmodule QyCore.Segment do
   # 最好保持一致
   @type id_as_key :: {id(), role()}
 
-  @type segment_and_result :: {Segment.t(), any()} | {nil, nil}
+  @typedoc "某一个片段以及已经由模型获得了结果的组合元组"
+  @type segment_and_result :: {Segment.t(), Segment.t()} | {nil, nil}
 
-  # 参数的位置（通常在多步渲染时会被用到）
+  @typedoc "参数的位置（通常在多步渲染时会被用到）"
   @type param_loc :: any()
 
   @type t ::
@@ -44,6 +47,14 @@ defmodule QyCore.Segment do
 
   ## 关于 ID
 
+  @doc """
+  生成一个随机的 ID 。
+
+  生成的 ID 由两部分组成：
+
+  * 时间戳（10 位）
+  * 随机数（16 位）
+  """
   def random_id(current \\ DateTime.utc_now()) do
     # 创建的时间戳
     timestamp =
@@ -61,6 +72,7 @@ defmodule QyCore.Segment do
     timestamp <> random
   end
 
+  @doc "对 ID 进行纯化的函数，即将 ID 从元组/结构体中提取出来"
   def purely_id(%__MODULE__{id: {id, _}}), do: id
   def purely_id({id, _}) when is_binary(id), do: id
   def purely_id(id) when is_binary(id), do: id

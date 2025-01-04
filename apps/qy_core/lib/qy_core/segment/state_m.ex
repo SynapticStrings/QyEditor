@@ -88,7 +88,23 @@ defmodule QyCore.Segment.StateM do
 
   ## 用法
 
-  基于通过 `QyCore.Segment.Manager` 来管理。
+  ### 前置项目
+
+  #### 编写检查片段模型检查与更新的模块
+
+  参见 `QyCore.Segment.Proto.LoadSegment` 模块。
+
+  #### 编写连接模型与状态机的桥接模块
+
+  参见 `QyCore.Segment.Proto.Executor` 模块。
+
+  ### 手动管理
+
+  TODO
+
+  ### 基于通过 `QyCore.Segment.Manager` 来管理
+
+  TODO
   """
 
   alias QyCore.Segment
@@ -100,12 +116,20 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机进程的名字和片段的名字保持一致，一一对应"
   @type segment_id :: Segment.id()
 
+  @typedoc "状态机进程的名字，其通常由私有函数 name/1 由 `segment_id` 生成"
   @type name :: {:global, {:segment, segment_id()}}
 
   @typedoc "状态机的状态"
   @type states :: :idle | :required_update | :do_update
 
-  @typedoc "状态机的数据"
+  @typedoc """
+  状态机的数据。
+
+  其存在两种形式：
+
+  * `{mannual_segment = %Segment{}, generated_segment = %Segment{}}` *没有未被模型推理的新数据的片段组合*
+  * `{{mannual_segment = %Segment{}, generated_segment = %Segment{}}, some_new_segment_and_context}` *存在未被模型推理的新数据的片段组合*
+  """
   @type data ::
           Segment.segment_and_result()
           | {Segment.segment_and_result(), maybe_new_state_and_input()}
@@ -121,8 +145,10 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机将获得数据时获得的事件内容"
   @type get_data :: :get_data
 
+  @typedoc "在状态机获得数据时返回给发起请求的进程的信息类型，包括此时的状态以及数据"
   @type data_and_state() :: {states(), data()}
 
+  @typedoc "状态机向请求进程发送动作的信息"
   @type send_data_action :: {:reply, pid(), data_and_state()}
 
   # load_segment 事件
@@ -151,16 +177,30 @@ defmodule QyCore.Segment.StateM do
           {:ready_for_update, validator :: (Segment.t() -> model_usability_msg()),
            usability_check :: (-> model_usability_msg())}
 
+  @typedoc """
+  检查数据是否合法的消息，由状态模型的进程向状态机发送。
+
+  在此设立此类型是为了定义状态机所接受的信息的类型。
+
+  其也是 `QyCore.Segment.Proto.Executor。validate_segment_with_model/1` 回调的返回类型。
+  """
   @type check_data_status_msg :: :accpet | {:reject, term()}
 
+  @typedoc """
+  模型可行性的类型，由状态机的进程向状态机发送。
+
+  此类型以及其 arity 还没有确定，所以暂时只有一个像那回事的返回值。
+  """
   @type model_usability_msg :: :ok | {:error, term()}
 
+  @typedoc "状态机在请求进程发起有关请求推理的事件后向请求进程发送动作的信息"
   @type send_model_and_segment_msg ::
           {:ok, :required_update}
           | {:error, :segment_not_valid}
           | {:error, :model_not_usable}
           | {:error, :no_new_segment}
 
+  @typedoc "状态机向请求进程发送动作的完整信息"
   @type send_model_status_actions ::
           {:reply, pid(), send_model_and_segment_msg()}
 
@@ -198,7 +238,11 @@ defmodule QyCore.Segment.StateM do
 
   # recieve_partial 事件
 
+  @type recieve_partial_event :: :recieve_partial
+
   # inference_end 事件
+
+  @type inference_end_event :: :inference_end
 
   ## 其他类型
 
@@ -208,9 +252,9 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "来自状态机发起请求业务时接收的事件的内容"
   @type events_from_model ::
-          :inference_begin
-          | :recieve_partial
-          | :inference_end
+          inference_begin_event()
+          | recieve_partial_event()
+          | inference_end_event()
           | :could_not_fetch_model
           | :inference_crash
 
@@ -220,7 +264,13 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机的动作"
   @type actions_from_segment_stm :: send_data_action() | send_model_status_actions()
 
-  @typedoc "新状态相关上下文：新片段/新片段+调用状态机的进程（用于对其发消息使用）/新片段+调用状态机的进程+其他"
+  @typedoc """
+  新状态相关上下文：
+
+  * 新片段
+  * 新片段+调用状态机的进程（用于对其发消息使用）
+  * 新片段+调用状态机的进程+其他（还没确定好）
+  """
   @type maybe_new_state_and_input ::
           Segment.t() | {Segment.t(), pid()} | {Segment.t(), pid(), any()}
 
@@ -288,7 +338,8 @@ defmodule QyCore.Segment.StateM do
 
   # 获得数据
 
-  @spec get_data(Segment.id()) :: data()
+  @doc "获得状态机的内部数据"
+  @spec get_data(Segment.id()) :: data_and_state()
   def get_data(segment_id) do
     # 这个得重写
     GenStateM.call(name(segment_id), :get_data)
@@ -324,6 +375,9 @@ defmodule QyCore.Segment.StateM do
   # 添加结果
 
   def attach(segment_id, result, role), do: GenStateM.cast(name(segment_id), {result, role})
+
+  # 存在错误
+  # def raise_error(segment_id, reason, context), do: GenStateM.cast(name(segment_id), {:error, reason})
 
   ################################
   ## Callbacks
@@ -476,13 +530,22 @@ defmodule QyCore.Segment.StateM do
     {:next_state, :do_update, {{old_segment, old_result}, new_segment}, []}
   end
 
+  # 这里先不动，等到时候再优化
+  @spec do_update(
+          :cast | {:call, any()},
+          get_data() | {:error, any()} | {:inference_end, any()} | {:recieve_partial, any()},
+          any()
+        ) ::
+          {:keep_state, any(), []}
+          | {:keep_state_and_data, [{:reply, any(), {any(), any()}}, ...]}
+          | {:next_state, :idle, any()}
   def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :do_update)
 
   def do_update(:cast, {:recieve_partial, partial_result}, data) do
     # ...
 
     # 数据变化：需要讨论
-    {:keep_state, attach_partial_result_to_data(data, partial_result, :partial)}
+    {:keep_state, attach_partial_result_to_data(data, partial_result, :partial), []}
   end
 
   # 得到结果，更新数据
@@ -494,12 +557,12 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 模型出错
-  def do_update(:cast, {:error, _reason}, _data) do
+  def do_update(:cast, {:error, _reason}, data) do
     # ...
 
     # [TODO) Action 改成 stop
     # 将 {new_segment, input_or_func} 交由 error_handler 处理
-    # {:next_state, :idle, nil}
+    {:next_state, :idle, data, []}
   end
 
   @impl true

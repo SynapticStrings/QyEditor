@@ -34,6 +34,8 @@ defmodule QyCore.Segment.Proto do
     和模型通信时向其他进程（一般是最开始触发推理事务的进程）发送消息时所用到的回调。
     """
 
+    # 这个函数还没确定好，如果确定将 Caller 的进程装在入状态机的数据的时候，这个函数就不需要了
+    @doc "发送消息给调用者"
     @callback send_event_to_caller(payload :: term()) :: :ok
   end
 
