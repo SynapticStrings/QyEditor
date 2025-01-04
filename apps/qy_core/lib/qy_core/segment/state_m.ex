@@ -297,8 +297,7 @@ defmodule QyCore.Segment.StateM do
 
   @impl true
   def callback_mode(),
-    # 简单来说就是把状态名当成函数
-    # 需要需要每次进入状态就有检查的话那就改成 [:state_functions, :enter_state]
+    # TODO: 改成 [:handle_event_function, :enter_state]
     do: :state_functions
 
   ################################
@@ -494,7 +493,8 @@ defmodule QyCore.Segment.StateM do
           | {:keep_state, data(), [send_load_status()]}
           | {:next_state, :execute_update, data(), [send_model_status_actions()]}
           | {:next_state, :idle, data(), [send_model_status_actions()]}
-  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :required_update)
+  def required_update({:call, from}, :get_data, data),
+    do: exec_send_data(from, data, :required_update)
 
   def required_update(
         {:call, from},
@@ -556,7 +556,8 @@ defmodule QyCore.Segment.StateM do
           {:keep_state, any(), []}
           | {:keep_state_and_data, [{:reply, any(), {any(), any()}}, ...]}
           | {:next_state, :idle, any()}
-  def execute_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :execute_update)
+  def execute_update({:call, from}, :get_data, data),
+    do: exec_send_data(from, data, :execute_update)
 
   def execute_update(:cast, {:recieve_partial, partial_result}, data) do
     # ...
@@ -581,6 +582,74 @@ defmodule QyCore.Segment.StateM do
     # 将 {new_segment, input_or_func} 交由 error_handler 处理
     {:next_state, :idle, data, []}
   end
+
+  # 获得状态机的数据
+  # def handle_event({:call, from}, :get_data, current_state, data) do
+  #   send_action = [{:reply, from, {state, data}}]
+
+  #   {:keep_state_and_data, send_action}
+  # end
+
+  # 准备推理模型的输入
+  # def handle_event(
+  #       {:call, from},
+  #       {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
+  #       state,
+  #       old_data
+  #     ) do
+  #   if state in [:idle, :required_update] do
+  #     # 确保数据形如 {{_, _}, _}
+  #     data =
+  #       case old_data do
+  #         {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
+  #         # 直接更新就好啦
+  #         {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
+  #         {old_pair = {nil, nil}, _any} -> {old_pair, new_segment}
+  #       end
+
+  #     # 检查是否是简单的更新
+  #     {{old_segment, old_result}, _maybe_new_segment} = data
+
+  #     case segment_infer?(old_segment, new_segment, simple_opt_validator) do
+  #       :required ->
+  #         :logger.info("Updating segment and required inference: #{inspect(data)}")
+
+  #         actions = [{:reply, from, {:ok, :required_update}}]
+
+  #         {:keep_state, data, actions}
+
+  #       :update ->
+  #         :logger.info(
+  #           "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
+  #         )
+
+  #         actions = [{:reply, from, {:ok, :operate_inference_end}}]
+
+  #         # 直接更新数据
+  #         {:keep_state, do_simple_update(old_data, new_segment, simple_opt_updator), actions}
+
+  #       # 发送错误信息
+  #       {:error, reason} ->
+  #         :logger.warning("Segment update error cause #{inspect(reason)}")
+
+  #         actions = [{:reply, from, {:error, reason}}]
+
+  #         # 保持原来的数据
+  #         {:keep_state, old_data, actions}
+  #     end
+  #   else
+  #     # 没想好
+  #     data =
+  #       case old_data do
+  #         {_mannual_segment = %Segment{}, _generated_segment} -> old_data
+  #         # 直接更新就好啦
+  #         {old_pair = {%Segment{}, %Segment{}}, _any} -> old_pair
+  #         {old_pair = {nil, nil}, _any} -> old_pair
+  #       end
+
+  #     {:next_state, :idle, old_data, []}
+  #   end
+  # end
 
   @impl true
   def terminate(reason, _current_state, _data) do
