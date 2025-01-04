@@ -43,13 +43,30 @@ defmodule QyCore.Segment.StateM do
 
   * `:idle`
   * `:required_update`
-  * `:do_update`
+  * `:execute_update`
 
   （需要考虑错误情况吗？）
 
   ### 外部事件
 
+  | 事件前状态\\事件后状态 | `:idle` | `:required_update` | `:execute_update` |
+  |------------------------|---------|--------------------|-------------------|
+  | `:idle` | `:load_segment` | `:ready_for_update` | 违法 |
+  | `:required_update` | `:loss_connect_with_model` | `:load_segment` | `:inference_begin` |
+  | `:execute_update` | `:inference_end` 或 `:inference_crash` | 违法 | `:recieve_partial` |
+
   一般情景：
+
+  * `:update_infer_graph` 模型更新
+    - 比方说这个片段不再需要某某函数，或者是需要加上某某操作
+    - 需要更多讨论
+
+  把 `:required_update` 和 `:execute_update` 两个状态分开，
+  主要是需要向用户展示工程中的这一片段是否更新到了的情况。
+
+  如果纯粹从性能角度来考虑的话， 使用 OpenUTAU 或是 OpenVPI 的编辑器就很不错（）
+
+  #### 更新片段
 
   * `:load_segment` 信息更新
     - 片段与输出不对应且需要通过模型推理获得新片段的结果时
@@ -57,34 +74,34 @@ defmodule QyCore.Segment.StateM do
     - `maybe_new_state_and_input` 为新片段
     - 可能包括不需要调用推理过程的更新
       - 比方说简单的拖拽时间
-    - 状态保持 `:idle`
-    - 关于要否单纯更新片段以及调用推理需要结合数据内容中的工具函数的判断
+    - 状态保持 `:idle` 或 `:required_update`
+    - 关于要否单纯更新片段以及调用推理需要结合工具函数的判断
+
+  #### 准备更新
+
   * `:ready_for_update`
-      - 数据必须是 {{_, _}, _} 的形式
-      - 对后续的 `maybe_new_state_and_input` 做准备
-      - 状态由 `:idle` 变为 `:required_update`
+    - 数据必须是 `{{_, _}, _}` 的形式
+    - 对后续的 `maybe_new_state_and_input` 做准备
+    - 状态由 `:idle` 变为 `:required_update` 或是保持在 `:required_update`
+
+  #### 与模型的通信
+
+  一般情形：
+
   * `:inference_begin` 准备调用模型推理
     - 通过调用对应的工具函数来将片段的数据交由推理模型处理
-    - `:required_update` -> `:do_update`
+    - `:required_update` -> `:execute_update`
   * `:recieve_partial` 得到部分结果
     - 一般是模型的输出是部分的，需要继续等待
-    - `:do_update` -> `:required_update`
+    - `:execute_update` -> `:required_update`
     - 递归性地更新结果
   * `:inference_end` 得到结果，固定新的（Segment 与输出）
-    - `:do_update` -> `:idle`
-    - TODO: 需要深入讨论可能会修改 Segment 本身的情况（例如音高参数，其既可以由模型生成，有可能被手动修改）
-  * `:update_infer_graph` 模型更新
-    - 比方说这个片段不再需要某某函数，或者是需要加上某某操作
-    - 需要更多讨论
+    - `:execute_update` -> `:idle`
 
   错误处理：
 
-  * `inference_crash` 推理过程出现崩溃
-
-  把 `:required_update` 和 `:do_update` 两个状态分开，
-  主要是需要向用户展示工程中的这一片段是否更新到了的情况。
-
-  如果纯粹从性能角度来考虑的话， 使用 OpenUTAU 或是 OpenVPI 的编辑器就很不错（）
+  * `:lose_connect_with_model` 与模型失去连接
+  * `:inference_crash` 推理过程出现崩溃
 
   ## 用法
 
@@ -120,7 +137,7 @@ defmodule QyCore.Segment.StateM do
   @type name :: {:global, {:segment, segment_id()}}
 
   @typedoc "状态机的状态"
-  @type states :: :idle | :required_update | :do_update
+  @type states :: :idle | :required_update | :execute_update
 
   @typedoc """
   状态机的数据。
@@ -255,7 +272,7 @@ defmodule QyCore.Segment.StateM do
           inference_begin_event()
           | recieve_partial_event()
           | inference_end_event()
-          | :could_not_fetch_model
+          | :lose_connect_with_model
           | :inference_crash
 
   @typedoc "状态机的事件集合"
@@ -475,7 +492,7 @@ defmodule QyCore.Segment.StateM do
         ) ::
           {:keep_state_and_data, [send_data_action()]}
           | {:keep_state, data(), [send_load_status()]}
-          | {:next_state, :do_update, data(), [send_model_status_actions()]}
+          | {:next_state, :execute_update, data(), [send_model_status_actions()]}
           | {:next_state, :idle, data(), [send_model_status_actions()]}
   def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :required_update)
 
@@ -527,11 +544,11 @@ defmodule QyCore.Segment.StateM do
 
     # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
     # 数据增加额外的上下文
-    {:next_state, :do_update, {{old_segment, old_result}, new_segment}, []}
+    {:next_state, :execute_update, {{old_segment, old_result}, new_segment}, []}
   end
 
   # 这里先不动，等到时候再优化
-  @spec do_update(
+  @spec execute_update(
           :cast | {:call, any()},
           get_data() | {:error, any()} | {:inference_end, any()} | {:recieve_partial, any()},
           any()
@@ -539,9 +556,9 @@ defmodule QyCore.Segment.StateM do
           {:keep_state, any(), []}
           | {:keep_state_and_data, [{:reply, any(), {any(), any()}}, ...]}
           | {:next_state, :idle, any()}
-  def do_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :do_update)
+  def execute_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :execute_update)
 
-  def do_update(:cast, {:recieve_partial, partial_result}, data) do
+  def execute_update(:cast, {:recieve_partial, partial_result}, data) do
     # ...
 
     # 数据变化：需要讨论
@@ -549,7 +566,7 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 得到结果，更新数据
-  def do_update({:call, _from}, {:inference_end, new_result}, data) do
+  def execute_update({:call, _from}, {:inference_end, new_result}, data) do
     # ...
 
     # 数据变化：{{_old_segment, _old_result}, {new_segment, input_or_func}} -> {new_segment, new_result}
@@ -557,7 +574,7 @@ defmodule QyCore.Segment.StateM do
   end
 
   # 模型出错
-  def do_update(:cast, {:error, _reason}, data) do
+  def execute_update(:cast, {:error, _reason}, data) do
     # ...
 
     # TODO: Action 改成 stop
