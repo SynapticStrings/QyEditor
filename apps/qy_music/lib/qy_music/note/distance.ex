@@ -256,7 +256,7 @@ defmodule QyMusic.Note.Distance.PythagoreanAdapter do
   alias QyMusic.{Note.Distance}
   @behaviour Distance
 
-  # [TODO)
+  # TODO
   # 需不需要再单独讨论升降音？
 
   def calculate_distance_pitch(_base_note_and_pitch, _target_note) do

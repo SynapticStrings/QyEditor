@@ -95,7 +95,7 @@ defmodule QyCore.Segment do
   def update_or_modify(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
     if with_same_id?(segment1, segment2) do
       case same_offset?(segment1, segment2) do
-        # TODO 再加上一个条件：序列一致
+        # TODO: 再加上一个条件：序列一致
         true -> :required
         false -> :update
       end

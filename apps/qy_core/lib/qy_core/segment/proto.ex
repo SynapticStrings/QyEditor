@@ -58,7 +58,7 @@ defmodule QyCore.Segment.Proto do
     @doc "确定模型的可行性"
     @callback usability_check() :: QyCore.Segment.StateM.model_usability_msg()
 
-    # TODO 需要确定具体的返回值
+    # TODO: 需要确定具体的返回值
     @callback execute_inference(QyCore.Segment.t()) :: QyCore.Segment.segment_and_result()
   end
 

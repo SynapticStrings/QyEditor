@@ -18,7 +18,7 @@ defmodule QyMusic.NoteValue do
 
   @type bpm :: number()
 
-  # TODO 确定好命名/别称用哪个
+  # TODO: 确定好命名/别称用哪个
   # length alias map
   @length_alias_map %{
     ## x全音符
@@ -44,7 +44,7 @@ defmodule QyMusic.NoteValue do
 
   # 时值 <--> 绝对时长
 
-  # [TODO) 附点/装饰音 bla bla
+  # TODO: 附点/装饰音 bla bla
 
   # slur/tie
 end

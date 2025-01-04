@@ -74,7 +74,7 @@ defmodule QyScript.DS.Sentence do
     |> case do
       [] ->
         :ok
-        # [TODO) when list not none -> get the key of params and return.
+        # TODO: when list not none -> get the key of params and return.
     end
   end
 end

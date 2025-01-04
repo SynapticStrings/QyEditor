@@ -72,7 +72,7 @@ defmodule QyCore.Segment.StateM do
     - 递归性地更新结果
   * `:inference_end` 得到结果，固定新的（Segment 与输出）
     - `:do_update` -> `:idle`
-    - [TODO) 需要深入讨论可能会修改 Segment 本身的情况（例如音高参数，其既可以由模型生成，有可能被手动修改）
+    - TODO: 需要深入讨论可能会修改 Segment 本身的情况（例如音高参数，其既可以由模型生成，有可能被手动修改）
   * `:update_infer_graph` 模型更新
     - 比方说这个片段不再需要某某函数，或者是需要加上某某操作
     - 需要更多讨论
@@ -560,7 +560,7 @@ defmodule QyCore.Segment.StateM do
   def do_update(:cast, {:error, _reason}, data) do
     # ...
 
-    # [TODO) Action 改成 stop
+    # TODO: Action 改成 stop
     # 将 {new_segment, input_or_func} 交由 error_handler 处理
     {:next_state, :idle, data, []}
   end

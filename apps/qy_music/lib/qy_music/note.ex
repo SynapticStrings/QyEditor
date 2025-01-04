@@ -17,7 +17,7 @@ defmodule QyMusic.Note do
 
   # 选用不同的调式
   # 十二平均律、五度相生律
-  # [TODO)[required discuss]
+  # TODO: [required discuss]
   # 需要引入 Well-temp 吗？
   @type tuning_format ::
           :twelve_et
