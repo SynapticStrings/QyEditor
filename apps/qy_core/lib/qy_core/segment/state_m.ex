@@ -298,8 +298,8 @@ defmodule QyCore.Segment.StateM do
   @impl true
   def callback_mode(),
     # 简单来说就是把状态名当成函数
-    # 需要需要每次进入状态就有检查的话那就改成 [:state_functions, :enter_state]
-    do: :state_functions
+    # 需要需要每次进入状态就有检查的话那就改成 [:hendle_event_function, :enter_state]
+    do: :handle_event_function
 
   ################################
   ## Public API
@@ -406,181 +406,179 @@ defmodule QyCore.Segment.StateM do
     {:ok, :idle, data}
   end
 
-  # 获得状态机的数据
-  @spec idle(
-          {:call, pid()},
-          get_data()
-          | load_segment_event_content()
-          | ready_for_update_event_content(),
-          data()
-        ) ::
-          {:keep_state_and_data, [send_data_action()]}
-          | {:keep_state, data(), [send_load_status()]}
-          | {:next_state, :required_update, data(), [send_load_status()]}
-  def idle({:call, from}, :get_data, data), do: exec_send_data(from, data, :idle)
+  @impl true
+  # 获得数据
+  @spec handle_event({:call, {pid(), :gen_statem.reply_tag()}}, get_data(), states(), data()) ::
+          {:keep_state_and_data, send_data_action()}
+  def handle_event({:call, from}, :get_data, state, data) do
+    send_action = [{:reply, from, {state, data}}]
 
-  # 准备推理模型的输入
-  def idle(
-        {:call, from},
-        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
-        old_data
-      ) do
-    load_segment_before_send_to_model(
-      from,
-      new_segment,
-      simple_opt_validator,
-      simple_opt_updator,
-      old_data
-    )
+    {:keep_state_and_data, send_action}
   end
 
-  def idle(
+  #  状态片段
+  @spec handle_event(
+          {:call, {pid(), :gen_statem.reply_tag()}},
+          load_segment_event_content(),
+          states(),
+          data()
+        ) ::
+          {:keep_state_and_data, []}
+          | {:keep_state_and_data, [send_data_action()]}
+          | {:keep_state, data(), [send_load_status()]}
+  # | {:next_state, :idle, data(), [send_model_status_actions()]}
+  def handle_event(
+        {:call, _from},
+        {:load_segment, _new_segment, _simple_opt_validator, _simple_opt_updator},
+        :execute_update,
+        _data
+      ) do
+    actions = []
+
+    {:keep_state_and_data, actions}
+  end
+
+  def handle_event(
+        {:call, from},
+        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
+        _state,
+        old_data
+      ) do
+    data =
+      case old_data do
+        {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
+        # 直接更新就好啦
+        {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
+        {old_pair = {nil, nil}, _any} -> {old_pair, new_segment}
+      end
+
+    # 检查是否是简单的更新
+    case segment_infer?(data, new_segment, simple_opt_validator) do
+      :required ->
+        segment_required_update(from, data)
+
+      :update ->
+        segment_only_modified(from, data, new_segment, simple_opt_updator)
+
+      # 发送错误信息
+      {:error, reason} ->
+        segment_has_error(from, old_data, reason)
+    end
+  end
+
+  # 准备更新
+  @spec handle_event(
+          {:call, {pid(), :gen_statem.reply_tag()}},
+          ready_for_update_event_content(),
+          states(),
+          data()
+        ) ::
+          {:keep_state_and_data, send_model_status_actions()}
+          | {:next_state, :idle, data(), send_model_status_actions()}
+          | {:next_state, :required_update, data(), [send_model_status_actions()]}
+  def handle_event(
         {:call, _from},
         {:ready_for_update, _validator, _usability_check},
-        {%Segment{}, %Segment{}}
+        state,
+        {%Segment{}, %Segment{}} = data
       ) do
     # 没有新片段你调用个啥
     actions = [{:error, :no_new_segment}]
 
-    # 这种情况就不变了
-    {:keep_state_and_data, actions}
+    case state do
+      :idle ->
+        # 这种情况就不变了
+        {:keep_state_and_data, actions}
+
+      _ ->
+        {:next_state, :idle, data, actions}
+    end
   end
 
-  def idle(
+  def handle_event(
         {:call, from},
         {:ready_for_update, validator, usability_check},
+        state,
         {old_pair = {_, _}, new_segment}
       ) do
-    with segment_valid <- segment_valid?(validator, new_segment),
-         model_useable <- usable?(usability_check, nil) do
-      case {segment_valid, model_useable} do
-        {{:reject, _term}, _} ->
-          # 不合法 -> 丢掉新数据
-          actions = [{:reply, from, {:error, :segment_not_valid}}]
-
-          :logger.info("Segment is not valid")
-
-          {:keep_state, old_pair, actions}
-
-        {:accept, :ok} ->
-          # 可用 -> 下一步
-          actions = [{:reply, from, {:ok, :required_update}}]
-
-          :logger.info("Segment is ready for update")
-
-          # 可能还需要干一件事情，保留 from 进程信息以便后续发送消息
-          {:next_state, :required_update, {old_pair, {new_segment, from}}, actions}
-
-        {:accept, _} ->
-          # 不可用 -> 返回忙碌动作
-          actions = [{:reply, from, {:error, :model_not_usable}}]
-
-          :logger.info("Model is not usable")
-
-          {:keep_state_and_data, actions}
+    # 无论如何都会干的事情：确定模型可用性
+    with :ok <- usable?(usability_check) do
+      case segment_valid?(validator, new_segment) do
+        :accept -> do_ready_update(from, old_pair, new_segment)
+        {:reject, _term} -> segment_invalid(from, old_pair)
       end
+    else
+      # 不可用 -> 返回报错信息
+      _ -> inference_service_untouchable(from, state, {old_pair, new_segment})
     end
+
+    # 可用 -> 依照状态进行对应的处理
+    # - :idle
+    # - :required_update
+    # - :execte_update
   end
 
-  @spec required_update(
-          :cast | {:call, pid()},
-          get_data()
-          | load_segment_event_content()
-          | ready_for_update_event_content()
-          | {:inference_begin, any()},
-          data()
-        ) ::
-          {:keep_state_and_data, [send_data_action()]}
-          | {:keep_state, data(), [send_load_status()]}
-          | {:next_state, :execute_update, data(), [send_model_status_actions()]}
-          | {:next_state, :idle, data(), [send_model_status_actions()]}
-  def required_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :required_update)
+  # @spec required_update(
+  #         :cast | {:call, pid()},
+  #         get_data()
+  #         | load_segment_event_content()
+  #         | ready_for_update_event_content()
+  #         | {:inference_begin, any()},
+  #         data()
+  #       ) ::
+  #         {:keep_state_and_data, [send_data_action()]}
+  #         | {:keep_state, data(), [send_load_status()]}
+  #         | {:next_state, :execute_update, data(), [send_model_status_actions()]}
+  #         | {:next_state, :idle, data(), [send_model_status_actions()]}
 
-  def required_update(
-        {:call, from},
-        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
-        old_data
-      ) do
-    # 我打个比方吧，作业在课代表收起来但还没有给老师的时候再交还来得及
-    # 我不是那种很坏的课代表，所以这里依旧可以更改数据
-    load_segment_before_send_to_model(
-      from,
-      new_segment,
-      simple_opt_validator,
-      simple_opt_updator,
-      old_data
-    )
-  end
+  # # 调用模型，等待结果
+  # # 适合用 cast
+  # # 这个是模型而非用户的进程发送的请求
+  # def required_update(
+  #       :cast,
+  #       {:inference_begin, _send_input_func},
+  #       {{old_segment, old_result}, new_segment}
+  #     ) do
+  #   # ...
 
-  def required_update(
-        {:call, from},
-        {:ready_for_update, _validator, usability_check},
-        {{_, _}, _} = old_segments
-      ) do
-    # 不需要做任何更新
-    # 仅有一个事件：确定模型可用性
-    case usable?(usability_check, nil) do
-      :ok ->
-        # 可用 -> 继续等待
-        {:keep_state_and_data, []}
+  #   # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
+  #   # 数据增加额外的上下文
+  #   {:next_state, :execute_update, {{old_segment, old_result}, new_segment}, []}
+  # end
 
-      _usable_status ->
-        # 不可用 -> 返回 idle
-        actions = [{:reply, from, {:error, :model_not_usable}}]
+  # # 这里先不动，等到时候再优化
+  # @spec execute_update(
+  #         :cast | {:call, any()},
+  #         get_data() | {:error, any()} | {:inference_end, any()} | {:recieve_partial, any()},
+  #         any()
+  #       ) ::
+  #         {:keep_state, any(), []}
+  #         | {:keep_state_and_data, [{:reply, any(), {any(), any()}}, ...]}
+  #         | {:next_state, :idle, any()}
 
-        {:next_state, :idle, old_segments, actions}
-    end
-  end
+  # def execute_update(:cast, {:recieve_partial, partial_result}, data) do
+  #   # ...
 
-  # 调用模型，等待结果
-  # 适合用 cast
-  # 这个是模型而非用户的进程发送的请求
-  def required_update(
-        :cast,
-        {:inference_begin, _send_input_func},
-        {{old_segment, old_result}, new_segment}
-      ) do
-    # ...
+  #   # 数据变化：需要讨论
+  #   {:keep_state, attach_partial_result_to_data(data, partial_result, :partial), []}
+  # end
 
-    # 为了保留出错时可能出现的上下文，所以数据不变，只变状态
-    # 数据增加额外的上下文
-    {:next_state, :execute_update, {{old_segment, old_result}, new_segment}, []}
-  end
+  # # 得到结果，更新数据
+  # def execute_update({:call, _from}, {:inference_end, new_result}, data) do
+  #   # ...
 
-  # 这里先不动，等到时候再优化
-  @spec execute_update(
-          :cast | {:call, any()},
-          get_data() | {:error, any()} | {:inference_end, any()} | {:recieve_partial, any()},
-          any()
-        ) ::
-          {:keep_state, any(), []}
-          | {:keep_state_and_data, [{:reply, any(), {any(), any()}}, ...]}
-          | {:next_state, :idle, any()}
-  def execute_update({:call, from}, :get_data, data), do: exec_send_data(from, data, :execute_update)
+  #   # 数据变化：{{_old_segment, _old_result}, {new_segment, input_or_func}} -> {new_segment, new_result}
+  #   {:next_state, :idle, attach_partial_result_to_data(data, new_result, :done)}
+  # end
 
-  def execute_update(:cast, {:recieve_partial, partial_result}, data) do
-    # ...
+  # # 模型出错
+  # def execute_update(:cast, {:error, _reason}, data) do
+  #   # ...
 
-    # 数据变化：需要讨论
-    {:keep_state, attach_partial_result_to_data(data, partial_result, :partial), []}
-  end
-
-  # 得到结果，更新数据
-  def execute_update({:call, _from}, {:inference_end, new_result}, data) do
-    # ...
-
-    # 数据变化：{{_old_segment, _old_result}, {new_segment, input_or_func}} -> {new_segment, new_result}
-    {:next_state, :idle, attach_partial_result_to_data(data, new_result, :done)}
-  end
-
-  # 模型出错
-  def execute_update(:cast, {:error, _reason}, data) do
-    # ...
-
-    # TODO: Action 改成 stop
-    # 将 {new_segment, input_or_func} 交由 error_handler 处理
-    {:next_state, :idle, data, []}
-  end
+  #   # TODO: Action 改成 stop
+  #   # 将 {new_segment, input_or_func} 交由 error_handler 处理
+  #   {:next_state, :idle, data, []}
+  # end
 
   @impl true
   def terminate(reason, _current_state, _data) do
@@ -591,77 +589,100 @@ defmodule QyCore.Segment.StateM do
   # 以及正常结束时的清理工作
 
   ################################
-  ## Same Routine
+  ## Routines
   ################################
 
-  # 获得状态机的数据
-  # 本质上是一个发送消息的 Action
-  defp exec_send_data(from, data, state) do
-    # Send current data to `from`
-    send_action = [{:reply, from, {state, data}}]
+  # 准备初始数据
 
-    {:keep_state_and_data, send_action}
+  defp preparing_initial(initial_segment = %Segment{id: segment_id}) do
+    {segment_id |> Segment.purely_id() |> name(),
+     {{%Segment{id: segment_id}, %Segment{id: segment_id}}, initial_segment}}
   end
 
-  # 装载新片段的过程
-  defp load_segment_before_send_to_model(
+  # 更新片段时会被用到的函数
+
+  defp segment_required_update(from, data) do
+    :logger.info("Updating segment and required inference: #{inspect(data)}")
+
+    actions = [{:reply, from, {:ok, :required_update}}]
+
+    {:keep_state, data, actions}
+  end
+
+  defp segment_only_modified(
          from,
+         {{old_segment, old_result}, _} = old_data,
          new_segment,
-         simple_opt_validator,
-         simple_opt_updator,
-         old_data
+         simple_opt_updator
        ) do
-    # 确保数据形如 {{_, _}, _}
-    data =
-      case old_data do
-        {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
-        # 直接更新就好啦
-        {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
-        {old_pair = {nil, nil}, _any} -> {old_pair, new_segment}
-      end
+    :logger.info(
+      "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
+    )
 
-    # 检查是否是简单的更新
-    {{old_segment, old_result}, _maybe_new_segment} = data
+    actions = [{:reply, from, {:ok, :operate_segment_end}}]
 
-    case segment_infer?(old_segment, new_segment, simple_opt_validator) do
-      :required ->
-        :logger.info("Updating segment and required inference: #{inspect(data)}")
-
-        actions = [{:reply, from, {:ok, :required_update}}]
-
-        {:keep_state, data, actions}
-
-      :update ->
-        :logger.info(
-          "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
-        )
-
-        actions = [{:reply, from, {:ok, :operate_segment_end}}]
-
-        # 直接更新数据
-        {:keep_state, do_simple_update(old_data, new_segment, simple_opt_updator), actions}
-
-      # 发送错误信息
-      {:error, reason} ->
-        :logger.warning("Segment update error cause #{inspect(reason)}")
-
-        actions = [{:reply, from, {:error, reason}}]
-
-        # 保持原来的数据
-        {:keep_state, old_data, actions}
-    end
+    # 直接更新数据
+    {:keep_state, do_simple_update(old_data, new_segment, simple_opt_updator), actions}
   end
+
+  defp segment_has_error(from, old_data, reason) do
+    :logger.warning("Segment update error cause #{inspect(reason)}")
+
+    actions = [{:reply, from, {:error, reason}}]
+
+    # 保持原来的数据
+    {:keep_state, old_data, actions}
+  end
+
+  # 在准备更新时用于处理后续信息的函数
+
+  defp segment_invalid(from, old_pair) do
+    actions = [{:reply, from, {:error, :segment_not_valid}}]
+
+    :logger.info("Segment is not valid")
+
+    {:keep_state, old_pair, actions}
+  end
+
+  defp inference_service_untouchable(from, :idle, _old_data) do
+    # 不可用 -> 返回忙碌动作
+    actions = [{:reply, from, {:error, :model_not_usable}}]
+
+    :logger.info("Model is not usable")
+
+    {:keep_state_and_data, actions}
+  end
+
+  defp inference_service_untouchable(from, :required_update, old_data) do
+    # 不可用 -> 返回 idle
+    actions = [{:reply, from, {:error, :model_not_usable}}]
+
+    {:next_state, :idle, old_data, actions}
+  end
+
+  defp do_ready_update(from, old_pair, new_segment) do
+    # 可用 -> 下一步
+    actions = [{:reply, from, {:ok, :required_update}}]
+
+    :logger.info("Segment is ready for update")
+
+    # 可能还需要干一件事情，保留 from 进程信息以便后续发送消息
+    {:next_state, :required_update, {old_pair, {new_segment, from}}, actions}
+  end
+
+  # 与推理服务通信时用到的函数
 
   # 更新结果时会被用到的函数
-  defp attach_partial_result_to_data(data, partial_result, status) do
-    data
-    |> load_new_result(partial_result)
-    |> maybe_release_context(status)
-  end
 
-  defp load_new_result(data, _partial_result), do: data
+  # defp attach_partial_result_to_data(data, partial_result, status) do
+  #   data
+  #   |> load_new_result(partial_result)
+  #   |> maybe_release_context(status)
+  # end
 
-  defp maybe_release_context(data, _status), do: data
+  # defp load_new_result(data, _partial_result), do: data
+
+  # defp maybe_release_context(data, _status), do: data
 
   ################################
   ## Helpers and Private Functions
@@ -671,16 +692,13 @@ defmodule QyCore.Segment.StateM do
 
   defp name(id), do: {:global, {:segment, id}}
 
-  # 准备初始数据
-
-  defp preparing_initial(initial_segment = %Segment{id: segment_id}) do
-    {segment_id |> Segment.purely_id() |> name(),
-     {{%Segment{id: segment_id}, %Segment{id: segment_id}}, initial_segment}}
-  end
-
   # 在 idle 以及 required_update 的 load_segments 事件下会被用到的函数
 
-  defp segment_infer?(old_segment, new_segment, update_or_modify_validator)
+  defp segment_infer?(
+         {{old_segment, _old_result}, _maybe_new_segment},
+         new_segment,
+         update_or_modify_validator
+       )
        when is_function(update_or_modify_validator, 2) do
     update_or_modify_validator.(old_segment, new_segment)
   end
@@ -695,7 +713,7 @@ defmodule QyCore.Segment.StateM do
     validator.(segment)
   end
 
-  defp usable?(func, _context) when is_function(func, 0) do
+  defp usable?(func) when is_function(func, 0) do
     func.()
   end
 
