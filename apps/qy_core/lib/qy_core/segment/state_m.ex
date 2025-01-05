@@ -192,6 +192,11 @@ defmodule QyCore.Segment.StateM do
   @type maybe_new_state_and_input ::
           Segment.t() | {Segment.t(), pid()} | {Segment.t(), pid(), any()}
 
+  #
+  @type invalid_request_to_statem_msg :: {:invalid, current_states :: states(), allowed_states :: [states()]}
+
+  @type send_invalid_req_action :: {:reply, pid(), invalid_request_to_statem_msg()}
+
   ################################
   ## Mode
   ################################
@@ -199,7 +204,8 @@ defmodule QyCore.Segment.StateM do
   @impl true
   def callback_mode(),
     # 简单来说就是把状态名当成函数
-    # 需要需要每次进入状态就有检查的话那就改成 [:hendle_event_function, :enter_state]
+    # TODO: 改成 [:hendle_event_function, :enter_state] 吧
+    # 这样可以把代码梳理得更贴合业务
     do: :handle_event_function
 
   ################################
@@ -353,6 +359,7 @@ defmodule QyCore.Segment.StateM do
         ) ::
           {:keep_state_and_data, []}
           | {:keep_state_and_data, [send_data_action()]}
+          | {:keep_state_and_data, [send_invalid_req_action()]}
           | {:keep_state, data(), [send_load_status()]}
   def handle_event(
         {:call, _from},
@@ -360,7 +367,7 @@ defmodule QyCore.Segment.StateM do
         :execute_update,
         _data
       ) do
-    actions = []
+    actions = [{:reply, :execute_update, [:idle, :required_update]}]
 
     {:keep_state_and_data, actions}
   end
@@ -371,13 +378,7 @@ defmodule QyCore.Segment.StateM do
         _state,
         old_data
       ) do
-    data =
-      case old_data do
-        {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
-        # 直接更新就好啦
-        {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
-        {old_pair = {nil, nil}, _any} -> {old_pair, new_segment}
-      end
+    data = prepare_data_when_update_seg(old_data, new_segment)
 
     # 检查是否是简单的更新
     case segment_infer?(data, new_segment, simple_opt_validator) do
@@ -465,17 +466,17 @@ defmodule QyCore.Segment.StateM do
           states(),
           data()
         ) ::
-          {:keep_state_and_data, send_model_status_actions()}
-          | {:next_state, :idle, data(), send_model_status_actions()}
+          {:keep_state_and_data, [send_model_status_actions()]}
+          | {:next_state, :idle, data(), [send_model_status_actions()]}
           | {:next_state, :required_update, data(), [send_model_status_actions()]}
   def handle_event(
-        {:call, _from},
+        {:call, from},
         {:ready_for_update, _validator, _usability_check},
         state,
         {%Segment{}, %Segment{}} = data
       ) do
     # 没有新片段你调用个啥
-    actions = [{:error, :no_new_segment}]
+    actions = [{:reply, from, {:error, :no_new_segment}}]
 
     case state do
       :idle ->
@@ -507,6 +508,9 @@ defmodule QyCore.Segment.StateM do
 
   # 进入 required_update 的状态检查
   # 是否保留了通信相关的进程 id
+  # def handle_event(:enter, oldState, :required_update, data) do
+  # 检查数据是否形如 {{_, _}, {_new_segment, _conn_helpers}}
+  # end
 
   @impl true
   def terminate(reason, _current_state, _data) do
@@ -518,16 +522,31 @@ defmodule QyCore.Segment.StateM do
 
   ################################
   ## Routines
+  #
+  # do some dirty work stuff
   ################################
 
   # 准备初始数据
 
   defp preparing_initial(initial_segment = %Segment{id: segment_id}) do
-    {segment_id |> Segment.purely_id() |> name(),
-     {{%Segment{id: segment_id}, %Segment{id: segment_id}}, initial_segment}}
+    {
+      segment_id |> Segment.purely_id() |> name(),
+      # 这里必须要确保 id 一致
+      {{%Segment{id: segment_id}, %Segment{id: segment_id}}, initial_segment}
+    }
   end
 
   # 更新片段时会被用到的函数
+
+  # 使数据形如 {{_, _}, _}
+  defp prepare_data_when_update_seg(old_data, new_segment) do
+    case old_data do
+      {_mannual_segment = %Segment{}, _generated_segment} -> {old_data, new_segment}
+      # 直接更新就好啦
+      {old_pair = {%Segment{}, %Segment{}}, _any} -> {old_pair, new_segment}
+      # {old_pair = {nil, nil}, _any} -> {old_pair, new_segment}
+    end
+  end
 
   defp segment_required_update(from, data) do
     :logger.info("Updating segment and required inference: #{inspect(data)}")
@@ -565,6 +584,7 @@ defmodule QyCore.Segment.StateM do
   # 在准备更新时用于处理后续信息的函数
 
   defp segment_invalid(from, old_pair) do
+    # 片段非法
     actions = [{:reply, from, {:error, :segment_not_valid}}]
 
     :logger.info("Segment is not valid")
@@ -572,35 +592,36 @@ defmodule QyCore.Segment.StateM do
     {:keep_state, old_pair, actions}
   end
 
-  defp inference_service_untouchable(from, :idle, _old_data) do
-    # 不可用 -> 返回忙碌动作
+  defp inference_service_untouchable(from, state, old_data) do
+    # 不可用 -> 返回 idle
     actions = [{:reply, from, {:error, :model_not_usable}}]
 
     :logger.info("Model is not usable")
 
-    {:keep_state_and_data, actions}
+    case state do
+      :idle ->
+        {:keep_state_and_data, actions}
+      _state ->
+        {:next_state, :idle, old_data, actions}
+    end
   end
 
-  defp inference_service_untouchable(from, :required_update, old_data) do
-    # 不可用 -> 返回 idle
-    actions = [{:reply, from, {:error, :model_not_usable}}]
-
-    {:next_state, :idle, old_data, actions}
-  end
-
-  defp do_ready_update(from, {old_pair, new_segment}, :idle) do
+  defp do_ready_update(from, {old_pair, new_segment}, state) do
     # 可用 -> 下一步
-    actions = [{:reply, from, {:ok, :required_update}}]
+    case state do
+      :idle ->
+        actions = [{:reply, from, {:ok, :required_update}}]
 
-    :logger.info("Segment is ready for update")
+        :logger.info("Segment is ready for update")
 
-    # 可能还需要干一件事情，保留 from 进程信息以便后续发送消息
-    {:next_state, :required_update, {old_pair, {new_segment, from}}, actions}
-  end
-  defp do_ready_update(from, _data, _state) do
-    actions = [{:reply, from, {}}]
+        # 可能还需要干一件事情，保留 from 进程信息以便后续发送消息
+        {:next_state, :required_update, {old_pair, {new_segment, from}}, actions}
 
-    {:keep_state_and_data, actions}
+      _ ->
+        actions = [{:reply, from, {}}]
+
+        {:keep_state_and_data, actions}
+    end
   end
 
   # 与推理服务通信时用到的函数
