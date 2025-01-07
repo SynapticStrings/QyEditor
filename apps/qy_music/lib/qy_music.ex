@@ -9,7 +9,7 @@ defmodule QyMusic do
   ## Examples
 
       iex> QyMusic.ping()
-      :pomg
+      :pong
 
   """
   def ping do

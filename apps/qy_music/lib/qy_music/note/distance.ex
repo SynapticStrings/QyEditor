@@ -9,7 +9,7 @@ defmodule QyMusic.Note.Distance do
   主要的函数：
 
   * `calculate_distance_sign/2`：计算音之间的度数
-  * `calculate_distance_pitch/2`：基于给定音名和音高计算音的频率
+  * `calculate_distance_pitch/2`：基于给定音名和音高计算特定音的频率
 
   """
 
