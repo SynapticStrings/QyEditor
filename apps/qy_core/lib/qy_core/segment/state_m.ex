@@ -1,4 +1,5 @@
 defmodule QyCore.Segment.StateM do
+  # TODO: 状态需要进一步地解耦
   @moduledoc """
   对片段状态的管理，为了更直观地向用户展示片段的状态。
 
@@ -7,39 +8,20 @@ defmodule QyCore.Segment.StateM do
 
   简单来说以下几步：
 
-  1. 输入更新时挂起，等待推理模型可用
-  2. 等待推理的结果
-  3. 得到结果后更新片段的状态
+  1. 输入更新后并得到推理请求后挂起，等待推理模型可用
+  2. 作为客户端与推理模型通信，等待推理的结果并更新
+  3. 得到全部结果后更新片段的状态
 
   如果其中存在出错可能还会进行简单的错误处理。
-
-  ## 数据本体
-
-  数据等同于状态机包含的所有数据，主要是：
-
-  `{{current_state, inference_result}, maybe_new_state_and_input}`
-
-  * `{current_state, inference_result}` 状态与输出的对应，弄成这个元组是因为可能在别的地方用到
-    - 最开始一般就是 `{nil, nil}`
-  * `maybe_new_state_and_input` 可能是新状态，有模型的输入时还包括着对应的输入或上下文
-    - 最开始就是准备要推理出结果的输入
-    - 如果输入输出对应，数据没有此片段（也就是元组只有两个元素）
-
-  ### 工具函数
-
-  主要负责检查、准备模型可用的输入、调用模型、错误处理等方面。作为 event_content 的上下文引入。
-
-  ### 新状态上下文（`maybe_new_state_and_input`）
-
-  一般来说，新状态的数据是片段的数据，但是也可能是其他数据（主要是模型的输入/能够通过片段得到输入的函数）。
 
   ## 状态变化
 
   ### 模型的状态
 
-  主要是以下三种情况：
+  主要是以下四种情况：
 
   * `:idle`
+  * `:has_new_segment`
   * `:required_update`
   * `:execute_update`
 
@@ -47,11 +29,12 @@ defmodule QyCore.Segment.StateM do
 
   ### 外部事件
 
-  | 事件前状态\\事件后状态 | `:idle` | `:required_update` | `:execute_update` |
-  |------------------------|---------|--------------------|-------------------|
-  | `:idle` | `:load_segment` | `:ready_for_update` | 违法 |
-  | `:required_update` | `:loss_connect_with_model` | `:load_segment` | `:inference_begin` |
-  | `:execute_update` | `:inference_end` 或 `:inference_crash` | 违法 | `:recieve_partial` |
+  | **原状态 \\ 后状态**          | **`:idle`**                  | **`:has_new_segment`** | **`:required_update`**               | **`:execute_update`** |
+  |------------------------|------------------------------|------------------------|--------------------------------------|-----------------------|
+  | **`:idle`**            | 更新片段且片段可以被直接更新               | 更新片段且片段需要更新            | /                                    | /                     |
+  | **`:has_new_segment`** | 撤回；更新的最新片段可以被更新              | 更新片段且片段需要更新；请求推理失败     | `Caller` 发起请求、状态机向推理模型发送申请且得到推理模型的回复 | /                     |
+  | **`:required_update`** | 更新的最新片段可以被更新且像推理模型发起取消请求并被同意 | 推理服务崩溃                 | 更新片段且片段需要更新                          | 推理服务触发事件，开始推理         |
+  | **`:execute_update`**  | 更新参数（附带推理结束）                 | 推理服务崩溃或超时              | /                                    | 更新参数                  |
 
   一般情景：
 
@@ -103,6 +86,8 @@ defmodule QyCore.Segment.StateM do
 
   ## 用法
 
+  状态机无法被单独使用。
+
   ### 前置项目
 
   #### 编写检查片段模型检查与更新的模块
@@ -115,7 +100,7 @@ defmodule QyCore.Segment.StateM do
 
   ### 手动管理
 
-  TODO
+  #### 用例：最小化的状态机与更新服务
 
   ### 基于通过 `QyCore.Segment.Manager` 来管理
 
@@ -135,25 +120,25 @@ defmodule QyCore.Segment.StateM do
   @type name :: {:global, {:segment, segment_id()}}
 
   @typedoc "状态机的状态"
-  @type states :: :idle | :required_update | :execute_update
+  @type states :: :idle | :has_new_segment | :required_update | :execute_update
 
-  @typedoc """
-  状态机的数据。
+  @typedoc "没有额外输入的数据"
+  @type data_without_input_context :: Segment.segment_and_result()
 
-  其存在两种形式：
+  @typedoc "暂时只有新片段的数据"
+  @type data_with_only_segment :: {Segment.segment_and_result(), Segment.t()}
 
-  * `{mannual_segment = %Segment{}, generated_segment = %Segment{}}` *没有未被模型推理的新数据的片段组合*
-  * `{{mannual_segment = %Segment{}, generated_segment = %Segment{}}, some_new_segment_and_context}` *存在未被模型推理的新数据的片段组合*
-  """
+  @typedoc "只有新片段以及 Caller 的 PID 时的数据"
+  @type data_with_segment_and_caller ::
+          {Segment.segment_and_result(), {Segment.t(), GenStateM.from()}}
+
+  @typedoc "状态机的数据。"
   @type data ::
-          Segment.segment_and_result()
-          | {Segment.segment_and_result(), maybe_new_state_and_input()}
+          data_without_input_context()
+          | data_with_only_segment()
+          | data_with_segment_and_caller()
 
   #
-  # inference_begin 事件
-
-  @type inference_begin_event :: :inference_begin
-
   # recieve_partial 事件
 
   @type recieve_partial_event :: :recieve_partial
@@ -182,21 +167,12 @@ defmodule QyCore.Segment.StateM do
   @typedoc "状态机的动作"
   @type actions_from_segment_stm :: send_data_action() | send_model_status_actions()
 
-  @typedoc """
-  新状态相关上下文：
-
-  * 新片段
-  * 新片段+调用状态机的进程（用于对其发消息使用）
-  * 新片段+调用状态机的进程+其他（还没确定好）
-  """
-  @type maybe_new_state_and_input ::
-          Segment.t() | {Segment.t(), pid()} | {Segment.t(), pid(), any()}
-
-  #
-  @type invalid_request_to_statem_msg ::
-          {:invalid, current_states :: states(), allowed_states :: [states()]}
-
-  @type send_invalid_req_action :: {:reply, pid(), invalid_request_to_statem_msg()}
+  # 不需要，这里出错一般是程序员的锅，直接 FunctionError 就行
+  # 不好说，问题是要将【状态检查】这个职责归于什么地方
+  # @typedoc "简单来说就是在不适合状态的触发不适合的事件"
+  # @type invalid_request_to_statem_msg ::
+  #         {:invalid_state, current_states :: states(), allowed_states :: [states()]}
+  # @type send_invalid_req_action :: {:reply, GenStateM.from(), invalid_request_to_statem_msg()}
 
   ################################
   ## Mode
@@ -205,9 +181,8 @@ defmodule QyCore.Segment.StateM do
   @impl true
   def callback_mode(),
     # 简单来说就是把状态名当成函数
-    # TODO: 改成 [:hendle_event_function, :enter_state] 吧
     # 这样可以把代码梳理得更贴合业务
-    do: :handle_event_function
+    do: [:handle_event_function, :state_enter]
 
   ################################
   ## Public API
@@ -274,7 +249,8 @@ defmodule QyCore.Segment.StateM do
   @spec load(
           Segment.id(),
           Segment.t(),
-          update_or_modify :: (Segment.t(), Segment.t() -> same_situations()),
+          update_or_modify :: (Segment.t(), Segment.t() ->
+                                 Segment.Proto.LoadSegment.same_situations()),
           modifier :: (Segment.segment_and_result(), Segment.t() ->
                          Segment.segment_and_result())
         ) :: any()
@@ -293,16 +269,32 @@ defmodule QyCore.Segment.StateM do
 
   @spec update(
           Segment.id(),
-          segment_validator :: (Segment.t() -> check_data_status_msg()),
-          model_usability_check :: (-> model_usability_msg())
+          segment_validator :: (Segment.t() -> Segment.Proto.Executor.segment_validate_status()),
+          model_usability_check :: (-> Segment.Proto.Executor.inference_worker_status())
         ) ::
           any()
   def update(segment_id, validator, usability_check),
     do: GenStateM.call(name(segment_id), {:ready_for_update, validator, usability_check})
 
-  # 添加结果
+  # 准备最开始的推理
 
-  def attach(segment_id, result, role), do: GenStateM.cast(name(segment_id), {result, role})
+  @spec begin(Segment.id(), (Segment.t(), atom() | nil -> any())) :: any()
+  def begin(segment_id, input_wrapper),
+    do: GenStateM.call(name(segment_id), {:begin_inference, input_wrapper})
+
+  # 添加结果
+  # 咖啡不断加 加 加 加 加到厌倦~
+
+  def attach(segment_id, result, :end),
+    do: GenStateM.cast(name(segment_id), {:inference_end, result})
+
+  # 有必要让状态机与推理服务持续通信
+  def attach(segment_id, result, role),
+    do: GenStateM.call(name(segment_id), {:recieve_partial, result, role})
+
+  # 重置数据
+
+  # def reset(segment_id), do: GenStateM.
 
   # 存在错误
   # def raise_error(segment_id, reason, context), do: GenStateM.cast(name(segment_id), {:error, reason})
@@ -326,103 +318,140 @@ defmodule QyCore.Segment.StateM do
   @type data_and_state() :: {states(), data()}
 
   @typedoc "状态机向请求进程发送动作的信息"
-  @type send_data_action :: {:reply, pid(), data_and_state()}
+  @type send_data_action :: {:reply, GenStateM.from(), data_and_state()}
 
   @impl true
-  @spec handle_event({:call, {pid(), :gen_statem.reply_tag()}}, get_data(), states(), data()) ::
+  @spec handle_event({:call, GenStateM.from()}, get_data(), states(), data()) ::
           {:keep_state_and_data, send_data_action()}
   def handle_event({:call, from}, :get_data, state, data) do
-    send_action =
-      {state, data}
-      |> reply(from)
-
-    keep_state_and_data([send_action])
+    {state, data}
+    |> reply_action(from)
+    |> keep_state_and_data()
   end
 
-  ##  状态片段 / load_segment
+  ## 进入 idle 时的检查
+  # 从不同的状态都可以返回 idle
+
+  def handle_event(:enter, _, :idle, data) do
+    case data do
+      {%Segment{}, %Segment{}} ->
+        keep_state_and_data([])
+
+      {{%Segment{}, %Segment{}} = pair, _extra_input} ->
+        # 怎么解决错误信息
+        keep_state(pair, [])
+    end
+  end
+
+  ## 更新状态片段 / load_segment
 
   @typedoc "状态机将更新片段时获得的事件内容"
   @type load_segment_event_content ::
           {:load_segment, new_segment :: Segment.t(),
-           update_or_modify :: (Segment.t(), Segment.t() -> same_situations()),
+           update_or_modify :: (Segment.t(), Segment.t() ->
+                                  Segment.Proto.LoadSegment.same_situations()),
            modifier :: (Segment.segment_and_result(), Segment.t() ->
                           Segment.segment_and_result())}
-
-  @typedoc "旧片段与新片段的比较情况，其决定了是否需要调用推理模型"
-  @type same_situations :: :required | :update | {:error, term()}
 
   @typedoc "状态机返回给发起请求的进程的信息类型"
   @type check_segment_result_msg ::
           {:ok, :required_update} | {:ok, :operate_segment_end} | {:error, term()}
 
   @typedoc "状态机将更新片段时返回给发起请求的进程的完整信息"
-  @type send_load_status :: {:reply, pid(), check_segment_result_msg()}
+  @type send_load_status :: {:reply, GenStateM.from(), check_segment_result_msg()}
 
   @spec handle_event(
           {:call, GenStateM.from()},
           load_segment_event_content(),
           states(),
-          data()
+          data_with_only_segment() | data_without_input_context()
         ) ::
           {:keep_state_and_data, []}
           | {:keep_state_and_data, [send_data_action()]}
-          | {:keep_state_and_data, [send_invalid_req_action()]}
           | {:keep_state, data(), [send_load_status()]}
   def handle_event(
-        {:call, _from},
-        {:load_segment, _new_segment, _simple_opt_validator, _simple_opt_updator},
-        :execute_update,
-        _data
+        {:call, from},
+        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
+        :idle,
+        pair
       ) do
-    # ???
-    actions = [{:reply, :execute_update, [:idle, :required_update]}]
+    pair_and_new_segment = {pair, new_segment}
 
-    keep_state_and_data(actions)
+    case segment_infer?(pair_and_new_segment, new_segment, simple_opt_validator) do
+      :required ->
+        do_when_required_update(pair_and_new_segment, from)
+
+      :update ->
+        do_when_update_without_request(pair, new_segment, simple_opt_updator, from)
+
+      {:error, reason} ->
+        do_when_segment_offset_cause_error({:error, reason}, pair, from)
+    end
   end
 
   def handle_event(
         {:call, from},
         {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
-        _state,
-        old_data
+        :has_new_segment,
+        {old_pair = {%Segment{}, %Segment{}}, _any}
       ) do
-    data =
-      case old_data do
-        {_mannual_segment = %Segment{}, _generated_segment} ->
-          {old_data, new_segment}
+    pair_and_new_segment = {old_pair, new_segment}
 
-        {old_pair = {%Segment{}, %Segment{}}, _any} ->
-          {old_pair, new_segment}
-      end
-
-    {{old_segment, old_result}, _} = old_data
-
-    # 检查是否是简单的更新
-    case segment_infer?(data, new_segment, simple_opt_validator) do
+    case segment_infer?(pair_and_new_segment, new_segment, simple_opt_validator) do
       :required ->
-        :logger.info("Updating segment and required inference: #{inspect(data)}")
-
-        keep_state(data, {:ok, :required_update} |> reply(from) |> then(&[&1]))
+        do_when_required_update(pair_and_new_segment, from)
 
       :update ->
-        :logger.info(
-          "Updating segment: #{do_simple_update({old_segment, old_result}, new_segment, simple_opt_updator) |> inspect}"
-        )
+        do_when_update_without_request(old_pair, new_segment, simple_opt_updator, from)
 
-        # 直接更新数据
-        old_data
-        |> do_simple_update(new_segment, simple_opt_updator)
-        |> keep_state({:ok, :operate_segment_end} |> reply(from) |> then(&[&1]))
-
-      # 发送错误信息
       {:error, reason} ->
-        :logger.warning("Segment update error cause #{inspect(reason)}")
+        do_when_segment_offset_cause_error({:error, reason}, old_pair, from)
+    end
+  end
 
-        {:error, reason}
-        |> reply(from)
-        |> then(&[&1])
-        # 保持原来的数据
-        |> then(&keep_state(old_data, &1))
+  def handle_event(
+        {:call, from},
+        {:load_segment, new_segment, simple_opt_validator, simple_opt_updator},
+        :required_update,
+        {old_pair = {%Segment{}, %Segment{}}, _any}
+      ) do
+    pair_and_new_segment = {old_pair, new_segment}
+
+    case segment_infer?(pair_and_new_segment, new_segment, simple_opt_validator) do
+      :required ->
+        # 只要没和 InferenceWorker 握手，更新还来得及
+        do_when_required_update(pair_and_new_segment, from)
+
+      :update ->
+        # TODO: 发送请求
+
+        do_when_update_without_request(old_pair, new_segment, simple_opt_updator, from)
+
+      {:error, reason} ->
+        # TODO: 发送请求
+
+        do_when_segment_offset_cause_error({:error, reason}, old_pair, from)
+    end
+  end
+
+  def handle_event(
+        {:call, from},
+        {:load_segment, _new_segment, _simple_opt_validator, _simple_opt_updator},
+        :execute_update,
+        _data
+      ) do
+    # 我现在正在想应该怎么处理这个消息
+    :during_inference
+    |> as_err()
+    |> reply_action(from)
+    |> keep_state_and_data()
+  end
+
+  # 后续处理
+
+  def handle_event(:enter, :idle, :has_new_segment, data) do
+    case data do
+      {{_, _}, %Segment{}} -> keep_state_and_data([])
     end
   end
 
@@ -460,26 +489,12 @@ defmodule QyCore.Segment.StateM do
 
   # 准备更新 / ready_for_update 事件
 
+  # 需要讨论
   @typedoc "状态机将准备更新模型时获得的事件内容"
   @type ready_for_update_event_content ::
-          {:ready_for_update, validator :: (Segment.t() -> check_data_status_msg()),
-           usability_check :: (-> model_usability_msg())}
-
-  @typedoc """
-  检查数据是否合法的消息，由状态模型的进程向状态机发送。
-
-  在此设立此类型是为了定义状态机所接受的信息的类型。
-
-  其也是 `QyCore.Segment.Proto.Executor。validate_segment_with_model/1` 回调的返回类型。
-  """
-  @type check_data_status_msg :: :accpet | {:reject, term()}
-
-  @typedoc """
-  模型可行性的类型，由状态机的进程向状态机发送。
-
-  此类型以及其 arity 还没有确定，所以暂时只有一个像那回事的返回值。
-  """
-  @type model_usability_msg :: :ok | {:error, term()}
+          {:ready_for_update,
+           validator :: (Segment.t() -> Segment.Proto.Executor.segment_validate_status()),
+           usability_check :: (-> Segment.Proto.Executor.inference_worker_status())}
 
   @typedoc "状态机在请求进程发起有关请求推理的事件后向请求进程发送动作的信息"
   @type send_model_and_segment_msg ::
@@ -490,13 +505,13 @@ defmodule QyCore.Segment.StateM do
 
   @typedoc "状态机向请求进程发送动作的完整信息"
   @type send_model_status_actions ::
-          {:reply, pid(), send_model_and_segment_msg()}
+          {:reply, GenStateM.from(), send_model_and_segment_msg()}
 
   @spec handle_event(
           {:call, GenStateM.from()},
           ready_for_update_event_content(),
           states(),
-          data()
+          data_with_only_segment() | data_without_input_context()
         ) ::
           {:keep_state_and_data, [send_model_status_actions()]}
           | {:next_state, :idle, data(), [send_model_status_actions()]}
@@ -504,22 +519,21 @@ defmodule QyCore.Segment.StateM do
   def handle_event(
         {:call, from},
         {:ready_for_update, _validator, _usability_check},
-        state,
-        {%Segment{}, %Segment{}} = data
+        # 剩下两种状态就让它报错吧
+        :has_new_segment,
+        {%Segment{}, %Segment{}}
       ) do
     # 没有新片段你调用个啥
-    send_new_segment = {:error, :no_new_segment} |> reply(from) |> then(&[&1])
+    send_new_segment =
+      :no_new_segment
+      |> as_err()
+      |> reply_action(from)
 
-    case state do
-      :idle ->
-        # 这种情况就不变了
-        keep_state_and_data(send_new_segment)
-
-      _ ->
-        next_state(:idle, data, send_new_segment)
-    end
+    # 这种情况就不变了
+    keep_state_and_data(send_new_segment)
   end
 
+  # TODO: refrac this callback
   def handle_event(
         {:call, from},
         {:ready_for_update, validator, usability_check},
@@ -529,11 +543,25 @@ defmodule QyCore.Segment.StateM do
     # 无论如何都会干的事情：确定模型可用性
     with :ok <- usable?(usability_check) do
       case segment_valid?(validator, new_segment) do
+        {:reject, _term} ->
+          # 片段非法
+
+          :logger.info("Segment is not valid")
+
+          {:segment_not_valid, new_segment}
+          # 把存在非法数据的片段丢回去
+          |> as_err()
+          |> reply_action(from)
+          |> then(&next_state(:idle, old_pair, &1))
+
         :accept ->
           # 可用 -> 下一步
           case state do
             :idle ->
-              reply_required_update = {:ok, :required_update} |> reply(from) |> then(&[&1])
+              reply_required_update =
+                :required_update
+                |> as_ok()
+                |> reply_action(from)
 
               :logger.info("Segment is ready for update")
 
@@ -541,24 +569,13 @@ defmodule QyCore.Segment.StateM do
               next_state(:required_update, {old_pair, {new_segment, from}}, reply_required_update)
 
             _ ->
-              keep_state_and_data({} |> reply(from) |> then(&[&1]))
+              keep_state_and_data({} |> reply_action(from))
           end
-
-        {:reject, _term} ->
-          # 片段非法
-
-          :logger.info("Segment is not valid")
-
-          {:error, :segment_not_valid}
-          |> reply(from)
-          |> then(&[&1])
-          |> then(&keep_state(old_pair, &1))
       end
     else
-      # 不可用 -> 返回报错信息
-      # 不可用 -> 返回 idle
+      # 不可用 -> 回复报错信息且返回 idle
       _ ->
-        reply_model_unusable = {:error, :model_not_usable} |> reply(from) |> then(&[&1])
+        reply_model_unusable = :model_not_usable |> as_err() |> reply_action(from)
 
         :logger.info("Model is not usable")
 
@@ -577,6 +594,46 @@ defmodule QyCore.Segment.StateM do
   # def handle_event(:enter, oldState, :required_update, data) do
   # 检查数据是否形如 {{_, _}, {_new_segment, _conn_helpers}}
   # end
+
+  # 开始推理 / begin_inference
+
+  @type inference_begin_event :: {:inference_begin, (-> any())}
+
+  @spec handle_event(
+          {:call, GenStateM.from()} | :cast,
+          inference_begin_event(),
+          states(),
+          data()
+        ) :: any()
+  # 因为推理服务不知道状态机的状态，所以必须每个状态都写出对应的处理方式
+  def handle_event(
+        {:call, from},
+        {:begin_inference, _input_wrapper},
+        :idle,
+        _data
+      ) do
+    # 我也不知道要写啥
+    "blabla"
+    |> reply_action(from)
+    |> keep_state_and_data()
+  end
+
+  def handle_event(
+        {:call, _from},
+        {:begin_inference, _input_wrapper},
+        :ready_for_update,
+        {{_, _}, {_input, _caller_ref}}
+      ) do
+    # ...
+  end
+
+  def handle_event({:call, from}, {:begin_inference, _input_wrapper}, :execute_update, _data) do
+    # 不好意思，我已经有男朋友了（bushi）
+    :during_inference
+    |> as_err()
+    |> reply_action(from)
+    |> keep_state_and_data()
+  end
 
   # 接收消息 / recieve_partial
 
@@ -606,6 +663,45 @@ defmodule QyCore.Segment.StateM do
     }
   end
 
+  # 检查片段可能有的更新类型
+
+  defp do_when_required_update(pair_with_new_segment, from) do
+    :logger.info("Updating segment and required inference: #{inspect(pair_with_new_segment)}")
+
+    :required_update
+    |> as_ok()
+    |> reply_action(from)
+    |> then(&next_state(:has_new_segment, pair_with_new_segment, &1))
+  end
+
+  defp do_when_update_without_request(old_pair, new_segment, simple_opt_updator, caller) do
+    :logger.info(
+      "Updating segment: #{do_simple_update(old_pair, new_segment, simple_opt_updator) |> inspect}"
+    )
+
+    reply =
+      :operate_segment_end
+      |> as_ok()
+      |> reply_action(caller)
+
+    # 更新数据
+    old_pair
+    |> do_simple_update(new_segment, simple_opt_updator)
+    # 甭管啥状态只要能够证明新片段跟旧数据的结果对应的话，返回到 :idle
+    # 适用场景：回滚到此前的某状态
+    |> then(&next_state(:idle, &1, reply))
+  end
+
+  defp do_when_segment_offset_cause_error({:error, reason}, old_pair, caller) do
+    :logger.warning("Segment update error cause #{inspect(reason)}")
+
+    # 发送错误信息
+    {:error, reason}
+    |> reply_action(caller)
+    # 保持原来的数据
+    |> then(&keep_state(old_pair, &1))
+  end
+
   # 与推理服务通信时用到的函数
 
   # defp send_data_to_caller(caller_pid, payload), do: send(caller_pid, payload)
@@ -631,6 +727,7 @@ defmodule QyCore.Segment.StateM do
     update_or_modify_validator.(old_segment, new_segment)
   end
 
+  # TODO: 在此确定到底是 {{_, _}, _} 还是 {_, _}
   defp do_simple_update(old_data, new_segment, modifier) when is_function(modifier, 2) do
     modifier.(old_data, new_segment)
   end
@@ -653,6 +750,8 @@ defmodule QyCore.Segment.StateM do
 
   defp reply(payload, from), do: {:reply, from, payload}
 
+  defp reply_action(payload, from), do: reply(payload, from) |> then(&[&1])
+
   # 包装 callback | 状态
 
   defp keep_state_and_data(actions), do: {:keep_state_and_data, actions}
@@ -663,5 +762,8 @@ defmodule QyCore.Segment.StateM do
 
   # 包装 callback | 消息内容
 
-  #
+  defp as_err(reason), do: {:error, reason}
+
+  defp as_ok(reason), do: {:ok, reason}
+  # defp as_ok(), do: :ok
 end

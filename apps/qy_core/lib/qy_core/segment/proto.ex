@@ -6,9 +6,12 @@ defmodule QyCore.Segment.Proto do
   defmodule LoadSegment do
     @moduledoc "装载片段所用到的回调"
 
+    @typedoc "旧片段与新片段的比较情况，其决定了是否需要调用推理模型"
+    @type same_situations :: :required | :update | {:error, term()}
+
     @doc "更新片段时的回调函数，确定旧片段与新片段的比较逻辑"
     @callback update_or_modify(QyCore.Segment.t(), QyCore.Segment.t()) ::
-                QyCore.Segment.StateM.same_situations()
+                same_situations()
 
     @doc "如果 update_or_modify/2 返回 :update，那么就会调用这个函数"
     @callback modifier(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) ::
@@ -52,18 +55,41 @@ defmodule QyCore.Segment.Proto do
     通常由下游编写的模块实现。
     """
 
-    @callback validate_segment_with_model(QyCore.Segment.t()) ::
-                QyCore.Segment.StateM.check_data_status_msg()
+    @typedoc """
+    模型可行性的类型，由状态机的进程向状态机发送。
 
-    @doc "确定模型的可行性"
-    @callback usability_check() :: QyCore.Segment.StateM.model_usability_msg()
+    此类型以及其 arity 还没有确定，所以暂时只有一个像那回事的返回值。
+    """
+    @type inference_worker_status :: :ok | {:error, term()}
+
+    @typedoc """
+    检查数据是否合法的消息，由状态模型的进程向状态机发送。
+
+    在此设立此类型是为了定义状态机所接受的信息的类型。
+
+    其也是 `QyCore.Segment.Proto.Executor.validate_segment_with_model` 回调的返回类型。
+    """
+    @type segment_validate_status :: :accpet | {:reject, term()}
+
+    @doc "调用模型相关服务检查数据片段是否合法"
+    @callback validate_segment_with_model(QyCore.Segment.t()) ::
+                segment_validate_status()
+
+    @doc "确定模型的可用性"
+    @callback usability_check() :: inference_worker_status()
 
     # TODO: 需要确定具体的返回值
-    @callback execute_inference(QyCore.Segment.t()) :: QyCore.Segment.segment_and_result()
+    @callback execute_inference(QyCore.Segment.t(), role :: atom()) :: QyCore.Segment.segment_and_result()
+
+    # 处理流程
+    # 有无新消息
   end
 
   def executor() do
     quote do
+      # 这里的 Executor 一般是 GenServer
+      use GenServer
+
       @behaviour Executor
     end
   end
