@@ -1,6 +1,7 @@
 defmodule QyCore.Param do
   # TODO
   # 理清项目中关于「参数」、「配置」、「选项」的区别以及适用范围
+  # 可以直接修改/需要调用服务修改
   @moduledoc """
   关于序列参数的相关模块。
 
