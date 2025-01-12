@@ -40,7 +40,7 @@ defmodule QyCore.BexierCurveTest do
     end
   end
 
-  alias QyCore.Params.BezierCurve
+  alias QyCore.Param.BezierCurve
 
   describe "画" do
     test "直线" do

@@ -1,4 +1,4 @@
-defmodule QyCore.Params.BezierCurve do
+defmodule QyCore.Param.BezierCurve do
   @moduledoc """
   贝塞尔曲线绘制参数的相关函数。
   """
@@ -56,13 +56,13 @@ defmodule QyCore.Params.BezierCurve do
   @doc """
   根据控制点绘制曲线。
 
-  ## Params
+  ## Param
 
   - `points` 控制点的坐标
   - `step` 每次迭代所走的步数，大于零小于一的浮点数，其倒数【一般】是点的数目
   """
   @spec draw(control_points :: control_points(), step :: float()) :: curve()
-  defdelegate draw(points, step), to: QyCore.Params.BezierCurve.Drawer
+  defdelegate draw(points, step), to: QyCore.Param.BezierCurve.Drawer
 
   # 从曲线本身反推控制点
   # 这篇文章的算法返回的是三次贝塞尔曲线的控制点，如果需要多次的话另当讨论

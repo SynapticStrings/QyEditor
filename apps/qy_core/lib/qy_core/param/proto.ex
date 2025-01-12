@@ -1,4 +1,4 @@
-defmodule QyCore.Params.Proto do
+defmodule QyCore.Param.Proto do
   @moduledoc """
   用于下游程序编写参数的检验与实现相关逻辑的模块。
 
@@ -13,12 +13,12 @@ defmodule QyCore.Params.Proto do
   ### Example
 
       iex> defmodule MyApp.Param.Pitch do
-      ...>   use QyCore.Params.Proto, type: :time_seq, name: :pitch
+      ...>   use QyCore.Param.Proto, type: :time_seq, name: :pitch
       ...>   # ...
       ...> end
   """
 
-  # alias QyCore.Params
+  # alias QyCore.Param
 
   # Meta of params
   # defstruct []

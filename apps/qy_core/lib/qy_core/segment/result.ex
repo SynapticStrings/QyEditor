@@ -9,5 +9,5 @@ defmodule QyCore.Segment.Result do
 
   # 另外一点是如果要手动编辑
   # 可能会创建一个新的 %P{} 结构体，但是其类型没有 :result 部分
-  # def result_to_chunks(%QyCore.Params{})
+  # def result_to_chunks(%QyCore.Param{})
 end

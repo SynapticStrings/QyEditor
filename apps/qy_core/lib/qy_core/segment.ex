@@ -4,7 +4,7 @@ defmodule QyCore.Segment do
 
   关于对段落的状态管理，请参见 `QyCore.Segment.StateM`
   """
-  alias QyCore.{Segment, Params}
+  alias QyCore.{Segment, Param}
 
   @typedoc "片段的唯一标识符"
   @type id :: binary()
@@ -30,7 +30,7 @@ defmodule QyCore.Segment do
           | %__MODULE__{
               id: id_as_key(),
               offset: number(),
-              params: %{param_loc() => Params.t()},
+              params: %{param_loc() => Param.t()},
               comments: any()
             }
   @enforce_keys [:id]

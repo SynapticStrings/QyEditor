@@ -1,27 +1,18 @@
-defmodule QyCore.Params do
+defmodule QyCore.Param do
   # TODO
   # 理清项目中关于「参数」、「配置」、「选项」的区别以及适用范围
   @moduledoc """
-  参数的设置。
+  关于序列参数的相关模块。
 
-  目前 QyEditor 计划实现以下的参数（待思考完成后再对其共性进行整理进而确定该模块的业务范围）：
+  TODO: 参数的范围（指令或描述）
 
-  * 音符（MIDI-like）
-  * 音素
-    * 音素序列
-    * 音素时长 -> 音素序列 & 音符
-  * 音高曲线
-  * 音频
-    * 波形
-    * 频谱
-    * 梅尔谱
-    * etc.
+  TODO: 为什么要设计这个模块
 
+  TODO: 这个模块需要干什么
   """
 
   # 参数的通用设置
   @type t :: %__MODULE__{
-          # id: any(),
           type: {param_source(), param_type(), param_name()} | nil,
           timestep: number(),
           offset: number(),
@@ -32,24 +23,24 @@ defmodule QyCore.Params do
   defstruct [
     # 从 DDD 的角度出发，这属于 Value Object
     # 所以不需要 id
-    # :id,
-    # 参数的 id （因为一个工程不可避免地存在很多个参数）
-    type: nil,
     # 参数的类型，包括参数数据的类型以及参数属于的类型
-    timestep: 0.0,
+    type: nil,
     # 参数的时间步长
-    offset: 0.0,
+    timestep: 0.0,
     # 首个参数的时长偏移量
     # 一般为零（因为在 Segment 下）
-    sequence: [],
+    offset: 0.0,
     # 参数序列
-    # 因为 Elixir 列表的实质，所以这里的序列是相反的，即 [last_element [... [first_element]]]
-    context: %{},
+    # 如果 opts 中的 seq 为 reverse ，数据从反向开始
+    sequence: [],
     # 上下文
     # 比方说这个参数黏附的对象是某某句子，或是某某时间戳
-    extra: %{}
+    context: %{},
     # 额外信息
     # 像是控制/约定参数的曲线
+    extra: %{},
+    # 设置
+    opts: [seq: :reverse]
   ]
 
   ## 类型
@@ -76,7 +67,7 @@ defmodule QyCore.Params do
   ## 检验参数是否合法
 
   # 默认值、极限值的设定以及约束
-  @spec validate(t(), keyword()) :: {:error, term()} | {:ok, QyCore.Params.t()}
+  @spec validate(t(), keyword()) :: {:error, term()} | {:ok, QyCore.Param.t()}
   def validate(params, opts \\ [])
 
   def validate(params = %__MODULE__{}, _opts) do
