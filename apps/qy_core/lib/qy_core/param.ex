@@ -4,29 +4,52 @@ defmodule QyCore.Param do
   @moduledoc """
   关于序列参数的相关模块。
 
-  TODO: 参数的范围（指令或描述）
+  其中的参数（Parameter）是用于表示和操作参数的值本身，包括了和时间步长无关的序列（`element_seq`）
+  以及和时间步长有关的序列（`:time_seq`）两类。粗暴地定义就是分别涉及到「指令」以及「结果」，
+  但实际上并不是一一对应，所以实质上的类型是包括了参数来源、序列类型以及参数名字的元组。
+
+  从 DDD 的角度出发，这里的参数属于 Value Object 。所以不需要 `id` 。
 
   TODO: 为什么要设计这个模块
+  设计该模块的目的是实现一系列和参数有关的逻辑以及定义一系列的接口以帮助或约束其他使用 `qy_core`
+  的开发者使其更专注业务逻辑。
+
+  ## 一瞥————从案例入手
+
+  如果仅凭文字讲述可能过于抽象，因此将结合一个例子予以讲解。
+
+  > *某使用场景需要将音素序列转变为音频以及对应的口型。*
+  >
+  > -> 音素/声学特征/音频/声道特征
 
   TODO: 这个模块需要干什么
+
+  - 曲线工具
+  - 默认值以及检查验证
+  - **简单**操作（需要上下文以及模型操作的不会依照这套运行）
+    - 延长截短
+    - 截断合并
+
+  ## 如何使用？
+
+  请参见 `QyCore.Param.Proto` 。
+
   """
 
   # 参数的通用设置
   @type t :: %__MODULE__{
-          type: {param_source(), param_type(), param_name()} | nil,
-          timestep: number(),
+          type: {param_source(), seq_type(), param_name()} | nil,
+          timestep: number() | nil,
           offset: number(),
           sequence: [any()],
           context: map(),
           extra: map()
         }
   defstruct [
-    # 从 DDD 的角度出发，这属于 Value Object
-    # 所以不需要 id
     # 参数的类型，包括参数数据的类型以及参数属于的类型
     type: nil,
     # 参数的时间步长
-    timestep: 0.0,
+    timestep: nil,
     # 首个参数的时长偏移量
     # 一般为零（因为在 Segment 下）
     offset: 0.0,
@@ -38,6 +61,7 @@ defmodule QyCore.Param do
     context: %{},
     # 额外信息
     # 像是控制/约定参数的曲线
+    # 还有一种案例是记录用户修改模型生成的数据（通过曲线或参数变化）
     extra: %{},
     # 设置
     opts: [seq: :reverse]
@@ -48,13 +72,13 @@ defmodule QyCore.Param do
   @typedoc "参数的来源一个是手动更新，还有一个是模型生成的"
   @type param_source :: :mannual | :generated
   @typedoc "参数的类型一个是时间序列（依赖于 `timestamp`）；另一个是元素序列（比方说音素的某某参数）"
-  @type param_type :: :time_seq | :element_seq
+  @type seq_type :: :time_seq | :element_seq
   @typedoc "具体的参数名字"
   @type param_name :: atom()
 
-  @doc "参数是否是结果"
-  def result?(%__MODULE__{type: {:generated, _, _}}), do: true
-  def result?(_), do: false
+  # @doc "参数是否是结果"
+  # def result?(%__MODULE__{type: {:generated, _, _}}), do: true
+  # def result?(_), do: false
 
   @doc "是否是时间序列"
   def time_seq?(%__MODULE__{type: {_, :time_seq, _}}), do: true

@@ -1,6 +1,6 @@
 defmodule QyCore.Param.BezierCurve do
   @moduledoc """
-  贝塞尔曲线绘制参数的相关函数。
+  贝塞尔曲线绘制参数的相关函数，其实现了曲线工具。
   """
 
   # 此模块深度参考了 http://www.whudj.cn/?p=384
