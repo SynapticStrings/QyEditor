@@ -173,6 +173,31 @@ defmodule QyMusic.Note.Distance do
     end
   end
 
+  # TODO: 计算某个音行多少音程后得到什么音
+  # @spec get_note_via_distance(Note.note(), degree(), direction :: :up | :down) :: Note.note()
+  def get_note_via_distance(source, {quanlity, key_diff} = _degree, direction \\ :up) do
+    raw_note = Note.format(source)
+
+    # _note_without_format =
+    # 这个函数需要将下面的 quanlity_mapper 反过来来获得具体的步数
+    get_gap_from_quanlity(quanlity, key_diff)
+    # 先通过半音数向上/下走到特定的音
+    |> then(&get_note_after_walking(raw_note, &1, direction))
+    |> Note.format()
+
+    # 再通过 Note.format/2 以及 key_diff 与实际两个音的差来实现标准化
+    # 可能会考虑过八度的情况 => 计算 octave_diff 分类讨论
+    # 但是暂时不考虑什么形如 C -> Ebb 之类的情况了（因为暂时不支持）
+  end
+
+  defp get_note_after_walking(source, 0, _direction), do: source
+
+  defp get_note_after_walking(source, steps, :up),
+    do: get_note_after_walking(source |> up_opt(), steps - 1, :up)
+
+  defp get_note_after_walking(source, steps, :down),
+    do: get_note_after_walking(source |> down_opt(), steps - 1, :down)
+
   quanlity_mapper = %{
     # 纯一度
     {0, 1} => :perfect,
@@ -182,10 +207,10 @@ defmodule QyMusic.Note.Distance do
     {1, 2} => :minor,
     # 大二度
     {2, 2} => :major,
-    # 小三度
-    {2, 3} => :minor,
+    # 减三度
+    {2, 3} => :diminished,
     # 增二度
-    {3, 2} => :diminished,
+    {3, 2} => :augmented,
     # 小三度
     {3, 3} => :minor,
     # 大三度
@@ -196,9 +221,9 @@ defmodule QyMusic.Note.Distance do
     {5, 3} => :augmented,
     # 纯四度
     {5, 4} => :perfect,
-    # 减四度
+    # 增四度
     {6, 4} => :augmented,
-    # 增五度
+    # 减五度
     {6, 5} => :diminished,
     # 纯五度
     {7, 5} => :perfect,
@@ -226,6 +251,8 @@ defmodule QyMusic.Note.Distance do
 
   for {{gap, key_diff}, quanlity} <- quanlity_mapper do
     def get_quanlity(unquote(gap), unquote(key_diff)), do: unquote(quanlity)
+
+    def get_gap_from_quanlity(unquote(key_diff), unquote(quanlity)), do: unquote(gap)
   end
 end
 
