@@ -14,7 +14,10 @@ defmodule QyCore.Param.Proto do
 
       iex> defmodule MyApp.Param.Pitch do
       ...>   use QyCore.Param.Proto, type: :time_seq, name: :pitch
-      ...>   # ...
+      ...>
+      ...>   contraint do
+      ...>     validate _pitch >= 0.0, or: :pitch_only_allowed_more_than_zero
+      ...>   end
       ...> end
   """
 
