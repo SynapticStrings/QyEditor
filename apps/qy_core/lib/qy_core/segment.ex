@@ -1,8 +1,10 @@
 defmodule QyCore.Segment do
   @moduledoc """
-  `QyCore.Segment` 是编辑器处理的基本单位。
+  片段是编辑器中执行处理操作的基本单位。
 
-  关于对段落的状态管理，请参见 `QyCore.Segment.StateM`
+  其通常由一堆参数依据需要被堆叠而组成。
+
+  关于对片段的状态管理，请参见 `QyCore.Segment.StateM`
   """
   alias QyCore.{Segment, Param}
 
@@ -12,22 +14,25 @@ defmodule QyCore.Segment do
   @typedoc "片段的角色，通常是该片段的来源"
   @type role :: :mannual | :generated
 
-  # 使用这种方式命名的原因是为了避免可能存在的将片段的 id 作为字典的键，但是
-  # 这里的 id() 一定要相同的情况
-  # 比方说在片段状态机中，对于人工编辑的片段以及模型生成的片段，其 id 一定是不同的
-  # 但是因为其本质上是对同一个事物在同一时间段的不同表征（比方说 f0 与实际波形）所以其 id
-  # 最好保持一致
+  @typedoc """
+  使用这种方式命名的原因是为了避免可能存在的将片段的 id 作为字典的键，但这里的
+  `t:id/0` 一定要相同的情况。
+
+  比方说在片段状态机中，对于人工编辑的片段以及模型生成的片段，其 id 一定是不同的
+  但是因为其本质上是对同一个事物在同一时间段的不同表征（比方说 f0 与实际波形）所以其 id
+  最好保持一致。
+  """
   @type id_as_key :: {id(), role()}
 
   @typedoc "某一个片段以及已经由模型获得了结果的组合元组"
-  @type segment_and_result :: {Segment.t(), Segment.t()} | {nil, nil}
+  @type segment_and_result :: {Segment.t(), Segment.t()}
 
-  @typedoc "参数的位置（通常在多步渲染时会被用到）"
+  @typedoc """
+  参数的位置（通常在多步渲染时会被用到）。
+  """
   @type param_loc :: any()
 
-  @type t ::
-          nil
-          | %__MODULE__{
+  @type t :: %__MODULE__{
               id: id_as_key(),
               offset: number(),
               params: %{param_loc() => Param.t()},
@@ -43,7 +48,11 @@ defmodule QyCore.Segment do
 
   ## 创建 Segment
 
-  # def create/2
+  def create(id \\ random_id(), params \\ %{}) do
+    # 最开始的创建还是由模型生成的
+    # 不存在【纯粹的】用户创建
+    %__MODULE__{id: {id, :generated}, params: params}
+  end
 
   ## 关于 ID
 
@@ -77,23 +86,24 @@ defmodule QyCore.Segment do
   def purely_id({id, _}) when is_binary(id), do: id
   def purely_id(id) when is_binary(id), do: id
 
-  def with_same_id?(segment1, segment2) do
-    IO.inspect(segment1.id)
-    IO.inspect(segment2.id)
+  def same_id?(%__MODULE__{} = segment1, %__MODULE__{} = segment2) do
+    # IO.inspect(segment1.id)
+    # IO.inspect(segment2.id)
     segment1.id == segment2.id or not (segment1.id != nil and segment2.id != nil)
   end
 
-  def same_offset?(segment1, segment2) do
+  def same_offset?(%__MODULE__{} = segment1, %__MODULE__{} = segment2) do
     segment1.offset == segment2.offset
   end
 
   ## 雷同逻辑
 
+  # 实际的检查机制以及更新机制会更复杂
   @behaviour Segment.Proto.LoadSegment
 
   @impl true
   def update_or_modify(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
-    if with_same_id?(segment1, segment2) do
+    if same_id?(segment1, segment2) do
       case same_offset?(segment1, segment2) do
         # TODO: 再加上一个条件：序列一致
         true -> :required

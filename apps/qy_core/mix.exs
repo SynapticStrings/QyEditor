@@ -43,9 +43,24 @@ defmodule QyCore.MixProject do
   end
 
   defp docs do
+    extras = [
+      # "guides_zh/Overview.md",
+      "guides_zh/params/BezierCurve.md",
+      "guides_zh/operator/Operate.md",
+      "guides_zh/operator/OperateGraph.md",
+      "guides_zh/segment/StateMachine.md",
+      "guides_zh/segment/SegmentManeger.md"
+    ]
+    groups_for_extras = [
+      # Guides: ~r/guides_zh\/[^\/]+\.md/,
+      Parameters: ~r/guides_zh\/params\/.?/,
+      "Operate-Param": ~r/guides_zh\/operator\/.?/,
+      "Segment-Management": ~r/guides_zh\/segment\/.?/
+    ]
     [
       main: "QyCore",
-      extras: ["README.md"]
+      extras: ["README.md"] ++ extras,
+      groups_for_extras: groups_for_extras
     ]
   end
 end

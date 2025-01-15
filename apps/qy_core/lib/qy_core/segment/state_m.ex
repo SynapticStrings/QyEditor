@@ -45,8 +45,6 @@ defmodule QyCore.Segment.StateM do
   把 `:required_update` 和 `:execute_update` 两个状态分开，
   主要是需要向用户展示工程中的这一片段是否更新到了的情况。
 
-  如果纯粹从性能角度来考虑的话， 使用 OpenUTAU 或是 OpenVPI 的编辑器就很不错（）
-
   #### 更新片段
 
   * `:load_segment` 信息更新
