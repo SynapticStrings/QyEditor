@@ -13,7 +13,7 @@ defmodule QyCore.Segment.Proto do
     @callback update_or_modify(QyCore.Segment.t(), QyCore.Segment.t()) ::
                 same_situations()
 
-    @doc "如果 update_or_modify/2 返回 :update，那么就会调用这个函数"
+    @doc "如果 `c:update_or_modify/2` 返回 `:update`，那么就会调用这个函数"
     @callback modifier(QyCore.Segment.segment_and_result(), QyCore.Segment.t()) ::
                 QyCore.Segment.segment_and_result()
   end
@@ -67,7 +67,7 @@ defmodule QyCore.Segment.Proto do
 
     在此设立此类型是为了定义状态机所接受的信息的类型。
 
-    其也是 `QyCore.Segment.Proto.Executor.validate_segment_with_model` 回调的返回类型。
+    其也是 `c:validate_segment_with_model/1` 回调的返回类型。
     """
     @type segment_validate_status :: :accpet | {:reject, term()}
 
