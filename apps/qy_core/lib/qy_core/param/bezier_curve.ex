@@ -1,6 +1,6 @@
 defmodule QyCore.Param.BezierCurve do
   @moduledoc """
-  贝塞尔曲线绘制参数的相关函数，其实现了曲线工具。
+  贝塞尔曲线绘制参数的相关函数，其是 QyCore 中曲线工具的基础。
   """
 
   # 此模块深度参考了 http://www.whudj.cn/?p=384
@@ -11,10 +11,11 @@ defmodule QyCore.Param.BezierCurve do
   @typedoc "控制点的坐标"
   @type control_points :: [point_location()]
 
+  @typedoc "格式形如 `{start_point, end_point}`"
+  @type line_tuple :: {point_location(), point_location()}
+
   @typedoc "三阶贝塞尔曲线组成的曲线控制点的坐标"
-  @type third_scale_control_points :: [{point_location(), point_location()}]
-  # 因为考虑到编辑的性质，所以这里的格式是 [last_points, ..., first_points]
-  # 其中 points 的格式是 {start_point, end_point}
+  @type third_scale_control_points :: [line_tuple()]
 
   @typedoc "曲线本体"
   @type curve :: [point_location()]

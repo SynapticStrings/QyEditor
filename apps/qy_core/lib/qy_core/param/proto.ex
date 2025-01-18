@@ -24,7 +24,10 @@ defmodule QyCore.Param.Proto do
   # alias QyCore.Param
 
   # Meta of params
-  # defstruct []
+  defstruct [
+    :name,
+    :type
+  ]
 
   @doc false
   defmacro __using__(_opts) do

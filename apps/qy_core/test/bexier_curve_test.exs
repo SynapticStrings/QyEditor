@@ -67,4 +67,12 @@ defmodule QyCore.BexierCurveTest do
       assert curve_has_target(forth_line, {4, 0})
     end
   end
+
+  describe "曲线和参数的互变" do
+    # ...
+  end
+
+  describe "三阶曲线和高阶曲线的互变" do
+    # ...
+  end
 end
