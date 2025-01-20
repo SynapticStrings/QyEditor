@@ -1,6 +1,6 @@
 defmodule QyCore.Segment do
   @moduledoc """
-  片段是编辑器中执行处理操作的基本单位。
+  片段是编辑器中执行处理操作的基本单位，也是推理服务的上下文与环境。
 
   其通常由一堆参数依据需要被堆叠而组成。
 
@@ -86,6 +86,8 @@ defmodule QyCore.Segment do
   def purely_id({id, _}) when is_binary(id), do: id
   def purely_id(id) when is_binary(id), do: id
 
+  ## 雷同逻辑
+
   def same_id?(%__MODULE__{} = segment1, %__MODULE__{} = segment2) do
     # IO.inspect(segment1.id)
     # IO.inspect(segment2.id)
@@ -95,8 +97,6 @@ defmodule QyCore.Segment do
   def same_offset?(%__MODULE__{} = segment1, %__MODULE__{} = segment2) do
     segment1.offset == segment2.offset
   end
-
-  ## 雷同逻辑
 
   # 实际的检查机制以及更新机制会更复杂
   @behaviour Segment.Proto.LoadSegment

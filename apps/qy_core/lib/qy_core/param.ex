@@ -5,7 +5,7 @@ defmodule QyCore.Param do
   @moduledoc """
   关于序列参数的相关模块。
 
-  其中的参数（Parameter）是用于表示和操作参数的值本身，包括了和时间步长无关的序列（`element_seq`）
+  其中的参数（Parameter）是用于表示和操作参数的值本身，包括了和时间步长无关的序列（`:element_seq`）
   以及和时间步长有关的序列（`:time_seq`）两类。粗暴地定义就是分别涉及到「指令」以及「结果」，
   但实际上并不是一一对应，所以实质上的类型是包括了参数来源、序列类型以及参数名字的元组。
 
@@ -19,10 +19,10 @@ defmodule QyCore.Param do
 
   如果仅凭文字讲述可能过于抽象，因此将结合一个例子予以讲解。
 
-  在某使用场景需要将元音音素序列转变为音频以及对应的舌位中，其将音素通过声学特征变为
-  音频以及舌位。
+  在某使用场景需要将元音**音素序列**转变为**音频**以及对应的**舌位**中，
+  其将音素通过**声学特征**变为音频以及舌位。
 
-  ## 形式的功能
+  ## 实现的功能
 
   - 曲线工具
   - 默认值以及检查验证
@@ -38,6 +38,7 @@ defmodule QyCore.Param do
 
   # 参数的通用设置
   @type t :: %__MODULE__{
+          created_at: DateTime.t(),
           type: {param_source(), seq_type(), param_name()} | nil,
           timestep: number() | nil,
           offset: number(),
@@ -46,6 +47,10 @@ defmodule QyCore.Param do
           extra: map()
         }
   defstruct [
+    # 修改的时间
+    # 用在可能需要修改模型生成的参数的情景
+    # 其是具体的参数得到确定时的时间（只有曲线但是没有参数的情况就不算）
+    :created_at,
     # 参数的类型，包括参数数据的类型以及参数属于的类型
     type: nil,
     # 参数的时间步长
