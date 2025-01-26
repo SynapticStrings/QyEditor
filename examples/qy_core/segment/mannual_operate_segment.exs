@@ -81,33 +81,33 @@ end
 ## 实际执行过程
 
 # 片段
-id = Segment.random_id()
+# id = Segment.random_id()
 
-segment = %Segment{
-  id: {id, :mannual}
-}
+# segment = %Segment{
+#   id: {id, :mannual}
+# }
 
-# 创建一个状态机进程
-{:ok, state_pid} = StateM.start_link(segment)
+# # 创建一个状态机进程
+# {:ok, state_pid} = StateM.start_link(segment)
 
-# 执行一次更新并且输出更新前后的数据
-StateM.get_data(id) |> IO.inspect(label: :data_before_inject)
+# # 执行一次更新并且输出更新前后的数据
+# StateM.get_data(id) |> IO.inspect(label: :data_before_inject)
 
-StateM.load(id, %{segment | params: ParamExecutor.inject()})
+# StateM.load(id, %{segment | params: ParamExecutor.inject()})
 
-StateM.get_data(id) |> IO.inspect(label: :data_after_inject)
+# StateM.get_data(id) |> IO.inspect(label: :data_after_inject)
 
 # 创建推理模型进程
 # {:ok, model_pid} = ExampleExecutor.start_link(nil)
 
 # 准备更新
-StateM.update(id, fn _ -> :accept end, fn -> :ok end)
+# StateM.update(id, fn _ -> :accept end, fn -> :ok end)
 
-# 执行更新
+# # 执行更新
 
-# 装载到新的片段
+# # 装载到新的片段
 
-if Process.alive?(state_pid) do
-  # 停止该状态机进程
-  StateM.stop(id)
-end
+# if Process.alive?(state_pid) do
+#   # 停止该状态机进程
+#   StateM.stop(id)
+# end
