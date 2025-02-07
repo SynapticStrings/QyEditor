@@ -25,7 +25,10 @@ defmodule QyCore.MixProject do
 
   # 不考虑依赖任何其他非标准库的应用或模块。
   defp deps do
-    [] ++ deps_doc()
+    [
+      # GenStage 的 Github 仓库归 elixir-lang ，四舍五入也算标准库了。
+      # {:gen_stage, "~> 1.2"}
+    ] ++ deps_doc()
   end
 
   # 文档相关

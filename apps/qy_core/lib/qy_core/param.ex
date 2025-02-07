@@ -38,8 +38,8 @@ defmodule QyCore.Param do
 
   # 参数的通用设置
   @type t :: %__MODULE__{
-          created_at: DateTime.t(),
-          type: {param_source(), seq_type(), param_name()} | nil,
+          # created_at: DateTime.t(),
+          name: {param_name(), param_source()} | nil,
           timestep: number() | nil,
           offset: number(),
           sequence: [any()],
@@ -50,9 +50,10 @@ defmodule QyCore.Param do
     # 修改的时间
     # 用在可能需要修改模型生成的参数的情景
     # 其是具体的参数得到确定时的时间（只有曲线但是没有参数的情况就不算）
-    :created_at,
-    # 参数的类型，包括参数数据的类型以及参数属于的类型
-    type: nil,
+    # :created_at,
+    # 参数的名字
+    # 包括参数的名字以及来源，这么区分是因为有些参数是手动修改的
+    name: nil,
     # 参数的时间步长
     timestep: nil,
     # 首个参数的时长偏移量
@@ -70,12 +71,13 @@ defmodule QyCore.Param do
     # 还有一种情况是记录用户修改模型生成的数据（通过曲线或参数变化）
     extra: %{},
     # 设置
-    opts: [seq: :reverse, automatic_check: false]
+    # 检查数据只在手动输入的前提，所以 automatic_check 必须在 allow_mannual 下才能生效
+    # opts: [seq: :reverse, allow_mannual: false]
   ]
 
   ## 类型
 
-  @typedoc "参数的来源一个是手动更新，还有一个是模型生成的"
+  @typedoc "参数的来源一个是手动更新，还有一个是模型生成的，前者的优先级高于后者"
   @type param_source :: :mannual | :generated
   @typedoc "参数的类型一个是时间序列（依赖于 `timestamp`）；另一个是元素序列（比方说音素的某某参数）"
   @type seq_type :: :time_seq | :element_seq
