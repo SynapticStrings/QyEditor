@@ -35,7 +35,7 @@ defmodule QyCore.Segment do
   @type t :: %__MODULE__{
               id: id_as_key(),
               offset: number(),
-              params: %{param_loc() => Param.t()},
+              params: %{param_loc() => Param.t()} | [{param_loc(), Param.t()}],
               comments: any()
             }
   @enforce_keys [:id]
