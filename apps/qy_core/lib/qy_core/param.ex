@@ -36,8 +36,7 @@ defmodule QyCore.Param do
 
   """
 
-  # 参数的通用设置
-  @type t :: %__MODULE__{
+  @type as_struct :: %__MODULE__{
           # created_at: DateTime.t(),
           name: {param_name(), param_source()} | nil,
           timestep: number() | nil,
@@ -59,9 +58,7 @@ defmodule QyCore.Param do
     # 首个参数的时长偏移量
     # 一般为零（因为在 Segment 下）
     offset: 0.0,
-    # 参数序列
-    # 如果 opts 中的 seq 为 reverse ，数据从反向开始
-    # 这种情况便于从后面添加数据
+    # 参数序列（序列是前向还是反向需要讨论一下）
     sequence: [],
     # 上下文
     # 比方说这个参数黏附的对象是某某句子，或是某某时间戳
@@ -70,9 +67,6 @@ defmodule QyCore.Param do
     # 像是控制/约定参数的曲线
     # 还有一种情况是记录用户修改模型生成的数据（通过曲线或参数变化）
     extra: %{},
-    # 设置
-    # 检查数据只在手动输入的前提，所以 automatic_check 必须在 allow_mannual 下才能生效
-    # opts: [seq: :reverse, allow_mannual: false]
   ]
 
   ## 类型
@@ -81,6 +75,8 @@ defmodule QyCore.Param do
   @type param_source :: :mannual | :generated
   @typedoc "参数的类型一个是时间序列（依赖于 `timestamp`）；另一个是元素序列（比方说音素的某某参数）"
   @type seq_type :: :time_seq | :element_seq
-  @typedoc "具体的参数名字（如果是模块的话可能会自动调用其中的函数实现特定的功能）"
+  @typedoc "具体的参数名字（如果是模块可能是定义参数的模块）"
   @type param_name :: atom() | module()
+  @typedoc "实际的类型包括 `t:as_struct/0` 、暂时没有数据的空值以及索引键的 `t:atom/0`"
+  @type t :: as_struct() | nil | atom()
 end

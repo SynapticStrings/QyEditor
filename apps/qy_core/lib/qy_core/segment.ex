@@ -3,14 +3,14 @@ defmodule QyCore.Segment do
   片段是编辑器中执行处理操作的基本单位，也是推理服务的上下文与环境。
 
   其通常由一堆参数依据需要被堆叠而组成。
-
-  关于对片段的状态管理，请参见 `QyCore.Segment.StateM`
   """
-  alias QyCore.{Segment, Param}
+  alias QyCore.{Segment, Recipe}
 
   @typedoc "片段的唯一标识符"
   @type id :: binary()
 
+  # TODO: 思考这里到底应该怎么定义、决定了什么
+  # 来源不可行，因为片段内很多参数的来源都不尽相同
   @typedoc "片段的角色，通常是该片段的来源"
   @type role :: :mannual | :generated
 
@@ -35,7 +35,7 @@ defmodule QyCore.Segment do
   @type t :: %__MODULE__{
               id: id_as_key(),
               offset: number(),
-              params: %{param_loc() => Param.t()} | [{param_loc(), Param.t()}],
+              params: Recipe.params(),
               comments: any()
             }
   @enforce_keys [:id]
@@ -97,34 +97,4 @@ defmodule QyCore.Segment do
   def same_offset?(%__MODULE__{} = segment1, %__MODULE__{} = segment2) do
     segment1.offset == segment2.offset
   end
-
-  # 实际的检查机制以及更新机制会更复杂
-  @behaviour Segment.Proto.LoadSegment
-
-  @impl true
-  def update_or_modify(segment1 = %__MODULE__{}, segment2 = %__MODULE__{}) do
-    if same_id?(segment1, segment2) do
-      case same_offset?(segment1, segment2) do
-        # TODO: 再加上一个条件：序列一致
-        true -> :required
-        false -> :update
-      end
-    else
-      {:error, :segments_has_not_same_name}
-    end
-  end
-
-  # When initial
-  def update_or_modify(nil, _), do: :required
-
-  def update_or_modify(_, _), do: {:error, :not_segment}
-
-  @impl true
-  def modifier({_old_segment, old_result}, new_segment) do
-    {new_segment, %{old_result | offset: new_segment.offset}}
-  end
-
-  ## 其他约束
-  # 相同轨道的 segment 是否存在重叠
-  # def overlap?(segment1, segment2, opts \\ [])
 end
