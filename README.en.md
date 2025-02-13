@@ -2,7 +2,7 @@
 
 A lightwight web synthesizer interface(exclude sythesizer).
 
-[简体中文](README.zh-CN.md)
+[简体中文](README.md)
 
 ## Feature
 
