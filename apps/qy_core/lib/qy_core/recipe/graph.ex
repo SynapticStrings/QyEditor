@@ -9,119 +9,76 @@ defmodule QyCore.Recipe.Graph do
 
   def get_vertex(steps), do: Enum.map(steps, &extract_vertex/1)
 
-  def get_edges_ports_and_orphans(steps) do
-    steps
+  # TODO: fix error
+  # vertex 是端口或 step 的 name
+  # edge 是 step 的 input_or_output_keyword
+  def build_conn(steps, graph \\ :digraph.new([])) do
+    vertex = steps
     |> get_vertex()
-    |> Enum.map(fn {n, {i, o}} -> {n, {Tuple.to_list(i), Tuple.to_list(o)}} end)
-    |> do_get_edges(steps, [], %{input: [], output: []}, [])
-    # 完全可以换种做法，根据 vertex 得到所有的 edges
-    # 再进行递归 =>
-    #   {0, 1} -> 输出, {step, 输出}
-    #   {1, 0} -> 输入, {输入, step}
-    #   {1, n} -> 普通的边，对应装载即可
-    #   {0, 0} -> 孤儿边
-    #   {n, _} -> 报错即可
-    #
-  end
 
-  # 用个小递归
-  defp do_get_edges([], _, edges, ports, orphans), do: {edges, ports, orphans}
-
-  defp do_get_edges(
-         [{name, {from, to}} | rest],
-         steps,
-         edges,
-         %{input: inputs, output: outputs},
-         orphans
-       ) do
-    maybe_upstream =
-      Enum.reduce(from, [], &check_same_edge(&1, rest, :current_as_input) ++ &2)
-
-    maybe_downstream =
-      Enum.reduce(to, [], &check_same_edge(&1, rest, :current_as_output) ++ &2)
-
-    IO.inspect(inputs, label: :i)
-    IO.inspect(outputs, label: :o)
-
-    case {maybe_upstream, maybe_downstream} do
-      {[], []} ->
-        # {无, 无} => 丢进  orphans 里
-        do_get_edges(
-          # Enum.reduce(from ++ to, rest, &delete_edge_in_rest/2),
-          rest,
-          steps,
-          edges,
-          %{input: inputs, output: outputs},
-          [get_step_from_vertex(name, steps) | orphans]
-        )
-
-      {_, []} ->
-        # {有, 无} => 输出端
-        do_get_edges(
-          Enum.reduce(from ++ to, rest, &delete_edge_in_rest/2),
-          steps,
-          edges,
-          %{input: inputs, output: [get_step_from_vertex(name, steps) | outputs]},
-          orphans
-        )
-
-      {[], _} ->
-        # {无, 有} => 输入端
-        do_get_edges(
-          Enum.reduce(from ++ to, rest, &delete_edge_in_rest/2),
-          steps,
-          edges,
-          %{input: [get_step_from_vertex(name, steps) | inputs], output: outputs},
-          orphans
-        )
-
-      {_from_step_list, _to_step_list} ->
-        # {有, 有} => 加上对应的边
-        # edge 形如 {name, from_step, to_step}
-        # name 就是那个原子本身
-        do_get_edges(
-          Enum.reduce(from ++ to, rest, &delete_edge_in_rest/2),
-          steps,
-          edges ++ {},
-          %{input: inputs, output: outputs},
-          orphans
-        )
-    end
-  end
-
-  defp check_same_edge(current, rest, :current_as_input) do
-    rest
-    |> Enum.filter(fn {_, {_, maybe_upstream}} -> current in maybe_upstream end)
-    |> case do
-      [] -> []
-      inner -> Enum.map(inner, fn {name, _} -> name end)
-    end
-  end
-
-  defp check_same_edge(current, rest, :current_as_output) do
-    rest
-    |> Enum.filter(fn {_, {maybe_downstream, _}} -> current in maybe_downstream end)
-    |> case do
-      [] -> []
-      inner -> Enum.map(inner, fn {name, _} -> name end)
-    end
-  end
-
-  defp delete_edge_in_rest(target, rest) do
-    Enum.map(rest, fn {name, {i, o}} ->
-      {name, {
-        if target in i do
-          List.delete(i, target)
-        else
-          i
-        end,
-        if target in o do
-          List.delete(o, target)
-        else
-          o
+    vertex
+    |> Enum.reduce([], fn {_, {i, o}}, acc -> Tuple.to_list(i) ++ Tuple.to_list(o) ++ acc end)
+    |> Enum.uniq()
+    |> Enum.map(&({&1, get_steps_from_edge(&1, steps)}))
+    |> Enum.map(
+      fn {name, %{as_from: as_from, as_to: as_to}} ->
+        case {length(as_from), length(as_to)} do
+          {0, 0} -> {name, :orphan}
+          {0, 1} ->
+            # 关于输入输出：
+            # port + 名字
+            # edge: {from_step, to_port}
+            {name, :output, {Enum.at(as_to, 0), name}}
+          {_, 0} ->
+            {name, :input, Enum.map(as_from, &({name, &1}))}
+          {1, _} ->
+            # 如果是边的话
+            {name, :edge, Enum.map(as_to, &({&1, Enum.at(as_from, 0)}))}
+          _ -> {name, :error}
         end
-      }}
-    end)
+      end
+    )
+    |> Enum.reduce(%{orphans: [], input_port: [], output_port: [], edge: []}, &update_format/2)
+    |> Map.merge(%{vertex: vertex})
+    |> do_graph(graph)
+  end
+
+  defp get_steps_from_edge(edge_name, steps) do
+    %{
+      as_from:
+        Enum.filter(steps, fn step ->
+          {from, _} = step.name_tuple
+          edge_name == from or edge_name in Tuple.to_list(from)
+        end),
+      as_to:
+        Enum.filter(steps, fn step ->
+          {_, to} = step.name_tuple
+          edge_name == to or edge_name in Tuple.to_list(to)
+        end)
+    }
+  end
+
+  defp update_format({name, :orphan}, items) do
+    %{items | orphans: [name | items[:orphans]]}
+  end
+
+  defp update_format({name, :output, edge}, items) do
+    %{items | output_port: [name | items[:output_port]], edge: [edge | items[:edge]]}
+  end
+
+  defp update_format({name, :input, edges}, items) do
+    %{items | input_port: [name | items[:input_port]], edge: edges ++ items[:edge]}
+  end
+
+  defp update_format({_name, :edge, edges}, items) do
+    %{items | edge: edges ++ items[:edge]}
+  end
+
+  defp do_graph(graph_dict, graph) do
+    Enum.map(graph_dict[:vertex], &:digraph.add_vertex(graph, &1))
+    Enum.map(graph_dict[:input_port], &:digraph.add_vertex(graph, &1))
+    Enum.map(graph_dict[:output_port], &:digraph.add_vertex(graph, &1))
+    Enum.map(graph_dict[:edge], fn {from, to} -> :digraph.add_edge(graph, from, to) end)
   end
 
   ## 合法性检查

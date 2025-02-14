@@ -1,5 +1,5 @@
 # alias QyCore.Param
-alias QyCore.Recipe.Step
+alias QyCore.Recipe.{Step, Graph}
 
 step1 = %Step{
   name: :step1,
@@ -30,4 +30,6 @@ step3 = %Step{
 
 ### USING GRAPH TO CONNECT NODE
 
-# Graph.get_edges_ports_and_orphans([step1, step2, step3])
+g = Graph.build_conn([step1, step2, step3]) |> IO.inspect(label: :graph_dict)
+
+:digraph_utils.components(g) |> IO.inspect()
