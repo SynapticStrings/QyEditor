@@ -17,7 +17,7 @@ defmodule QyCore.Recipe do
 
       (params, options) :: params
 
-  其中 `t:params/0` 是可能会更新的参数的列表或字典，`t:options/0` 是一个选项的列表。
+  其中 `params` 是可能会更新的参数的列表或字典，`options` 是一个选项的列表。
 
   ### 模块式
 
@@ -57,57 +57,4 @@ defmodule QyCore.Recipe do
 
   TODO
   """
-
-  # TODO: ensure name.
-  @type params :: %{atom() => QyCore.Param.t() | nil}
-
-  @type options :: any()
-
-  @callback init(options()) :: options()
-
-  # 需要改名字吗？
-  @callback require() :: {tuple(), tuple()}
-
-  @doc "执行实际推理任务的函数，其输入与输出均为元组"
-  @callback infer(tuple(), options()) :: tuple()
-
-  @spec add(params(), atom(), QyCore.Param.t()) :: params()
-  def add(params, key, value), do: %{params | key => value}
-
-  @spec get(params(), atom()) :: QyCore.Param.t()
-  def get(params, key), do: Map.get(params, key)
-
-  def prelude(params, input_key) do
-    # Is it works?
-    {params, Enum.map(input_key, fn k -> Map.get(params, k) end)}
-  end
-
-  def exec_step({params, input}, func, opts) do
-    {params, func.(input, opts)}
-  end
-
-  def postlude({params, result}, output_key) do
-    result
-    |> then(&Enum.zip(output_key, &1) |> Enum.into(%{}))
-    |> then(&Map.merge(params, &1))
-  end
-
-  @spec exec(params(), {tuple(), tuple()}, function(), function(), options()) :: params()
-  def exec(params, {input_key, output_key}, init_func \\ &(&1), infer_func, opts)
-      when is_function(infer_func, 2) and is_function(init_func, 1) do
-    params
-    |> prelude(input_key)
-    |> exec_step(infer_func, init_func.(opts))
-    |> postlude(output_key)
-  end
-
-  defoverridable exec: 4
-
-  defmacro __using__(_opts) do
-    quote do
-      @behavoir QyCore.Recipe
-
-      import QyCore.Recipe
-    end
-  end
 end

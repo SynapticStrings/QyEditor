@@ -4,7 +4,7 @@ defmodule QyCore.Segment do
 
   其通常由一堆参数依据需要被堆叠而组成。
   """
-  alias QyCore.{Segment, Recipe}
+  alias QyCore.Segment
 
   @typedoc "片段的唯一标识符"
   @type id :: binary()
@@ -12,7 +12,7 @@ defmodule QyCore.Segment do
   # TODO: 思考这里到底应该怎么定义、决定了什么
   # 来源不可行，因为片段内很多参数的来源都不尽相同
   @typedoc "片段的角色，通常是该片段的来源"
-  @type role :: :mannual | :generated
+  @type role :: nil
 
   @typedoc """
   使用这种方式命名的原因是为了避免可能存在的将片段的 id 作为字典的键，但这里的
@@ -27,15 +27,10 @@ defmodule QyCore.Segment do
   @typedoc "某一个片段以及已经由模型获得了结果的组合元组"
   @type segment_and_result :: {Segment.t(), Segment.t()}
 
-  @typedoc """
-  参数的位置（通常在多步渲染时会被用到）。
-  """
-  @type param_loc :: any()
-
   @type t :: %__MODULE__{
               id: id_as_key(),
               offset: number(),
-              params: Recipe.params(),
+              params: %{atom() => QyCore.Param.t()},
               comments: any()
             }
   @enforce_keys [:id]
@@ -52,7 +47,7 @@ defmodule QyCore.Segment do
   def create(id \\ random_id(), params \\ %{}) do
     # 最开始的创建还是由模型生成的
     # 不存在【纯粹的】用户创建
-    %__MODULE__{id: {id, :generated}, params: params}
+    %__MODULE__{id: {id, nil}, params: params}
   end
 
   ## 关于 ID
