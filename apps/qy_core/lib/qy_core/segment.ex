@@ -43,7 +43,8 @@ defmodule QyCore.Segment do
     :id,
     offset: 0.0,
     comments: "",
-    params: %{}
+    params: %{},
+    # TODO: add aviable recipes here.
   ]
 
   ## 创建 Segment

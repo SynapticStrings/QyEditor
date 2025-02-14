@@ -1,4 +1,7 @@
 defmodule QyCore.Recipe do
+  # 当前的难点
+  # 参数的检查
+  # 不同类型参数的转变
   @moduledoc """
   菜谱可以包括单步的操作，也可以是制作食物的整个过程，所以这里就等同于「操作」。
 
@@ -42,12 +45,11 @@ defmodule QyCore.Recipe do
         end
 
         @impl true
-        def call(params, [format: :sine_wave] = opts) do
-          wave = get(params, :f0)
-          |> pitch_to_sine_wave(sample_rate: opts[:sample_rate], init_phase: 0.0)
+        def require(), do: {{:f0}, {:wave}}
 
-          params
-          |> add(:wave, wave)
+        @impl true
+        def infer({f0}, [format: :sine_wave] = opts) do
+          {pitch_to_sine_wave(f0, sample_rate: opts[:sample_rate], init_phase: 0.0)}
         end
       end
 
@@ -57,24 +59,55 @@ defmodule QyCore.Recipe do
   """
 
   # TODO: ensure name.
-  @type params :: [{atom(), QyCore.Param.t()}] | %{atom() => QyCore.Param.t() | nil}
+  @type params :: %{atom() => QyCore.Param.t() | nil}
 
   @type options :: any()
 
   @callback init(options()) :: options()
 
-  @callback call(params(), options()) :: params()
+  # 需要改名字吗？
+  @callback require() :: {tuple(), tuple()}
+
+  @doc "执行实际推理任务的函数，其输入与输出均为元组"
+  @callback infer(tuple(), options()) :: tuple()
 
   @spec add(params(), atom(), QyCore.Param.t()) :: params()
-  def add([_ | _] = params, key, value), do: [{key, value} | params]
-  def add(%{} = params, key, value), do: %{params | key => value}
+  def add(params, key, value), do: %{params | key => value}
 
   @spec get(params(), atom()) :: QyCore.Param.t()
-  def get(params, key) do
-    {_, res} = Enum.find(params, {nil, nil}, fn {k, _} -> key == k end)
+  def get(params, key), do: Map.get(params, key)
 
-    res
+  def prelude(params, input_key) do
+    # Is it works?
+    {params, Enum.map(input_key, fn k -> Map.get(params, k) end)}
   end
 
-  # TODO: impl run
+  def exec_step({params, input}, func, opts) do
+    {params, func.(input, opts)}
+  end
+
+  def postlude({params, result}, output_key) do
+    result
+    |> then(&Enum.zip(output_key, &1) |> Enum.into(%{}))
+    |> then(&Map.merge(params, &1))
+  end
+
+  @spec exec(params(), {tuple(), tuple()}, function(), function(), options()) :: params()
+  def exec(params, {input_key, output_key}, init_func \\ &(&1), infer_func, opts)
+      when is_function(infer_func, 2) and is_function(init_func, 1) do
+    params
+    |> prelude(input_key)
+    |> exec_step(infer_func, init_func.(opts))
+    |> postlude(output_key)
+  end
+
+  defoverridable exec: 4
+
+  defmacro __using__(_opts) do
+    quote do
+      @behavoir QyCore.Recipe
+
+      import QyCore.Recipe
+    end
+  end
 end
