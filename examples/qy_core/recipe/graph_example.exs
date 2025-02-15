@@ -30,6 +30,10 @@ step3 = %Step{
 
 ### USING GRAPH TO CONNECT NODE
 
-g = Graph.build_conn([step1, step2, step3]) |> IO.inspect(label: :graph_dict)
+g = [step1, step2, step3]
+  |> Graph.build_conn_from_steps()
+  |> IO.inspect(label: :graph_dict)
+  |> Graph.get_graph_from_struct()
+  |> IO.inspect(label: :graph)
 
 :digraph_utils.components(g) |> IO.inspect()
