@@ -54,6 +54,7 @@ defmodule QyCore.Param do
     timestep: nil,
     # 首个参数的时长偏移量
     # 一般为零（因为在 Segment 下）
+    # 其可能与调度顺序有关（offset 更小的会被更快地推理出结果）
     offset: 0.0,
     # 参数序列（序列是前向还是反向需要讨论一下）
     sequence: [],
