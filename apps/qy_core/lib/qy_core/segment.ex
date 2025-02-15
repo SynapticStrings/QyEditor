@@ -28,17 +28,17 @@ defmodule QyCore.Segment do
   @type segment_and_result :: {Segment.t(), Segment.t()}
 
   @type t :: %__MODULE__{
-              id: id_as_key(),
-              offset: number(),
-              params: %{atom() => QyCore.Param.t()},
-              comments: any()
-            }
+          id: id_as_key(),
+          offset: number(),
+          params: %{atom() => QyCore.Param.t()},
+          comments: any()
+        }
   @enforce_keys [:id]
   defstruct [
     :id,
     offset: 0.0,
     comments: "",
-    params: %{},
+    params: %{}
     # TODO: add aviable recipes here.
   ]
 

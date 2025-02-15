@@ -23,36 +23,6 @@ defmodule QyCore.Recipe do
 
   对于复杂的操作流程，例如加载一个模型再通过输入的参数来得到对应的结果，就需要实现一个模块。
 
-  ## 例子
-
-  函数式的例子：
-
-      def load_waveform_from_file(params, opts) do
-        file_path = Keyword.get(opts, :waveform_path)
-
-        add(params, :waveform, File.read!(file_path) |> extract_waveform())
-      end
-
-  模块式的例子：
-
-      defmodule PitchToWaveform do
-        @behaviour QyCore.Recipe
-
-        @impl true
-        def init(opts) do
-          # TODO: padding default if opt doen't exist.
-          opts
-        end
-
-        @impl true
-        def require(), do: {{:f0}, {:wave}}
-
-        @impl true
-        def infer({f0}, [format: :sine_wave] = opts) do
-          {pitch_to_sine_wave(f0, sample_rate: opts[:sample_rate], init_phase: 0.0)}
-        end
-      end
-
   ### 复杂工作流的设计
 
   TODO
