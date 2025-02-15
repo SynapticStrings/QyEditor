@@ -47,7 +47,7 @@ g =
   # |> IO.inspect(label: :graph_dict)
   |> Graph.get_graph_from_struct()
   # |> IO.inspect(label: :graph)
-# 
+#
 
 Graph.Helper.has_cycle?(g) |> IO.inspect(label: :cycle?)
 
