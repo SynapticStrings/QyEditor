@@ -19,12 +19,12 @@ defmodule QyMusic.Note.Distance do
   @type quality :: :perfect | :major | :minor | :augmented | :diminished
   @type degree :: {quality(), pos_integer()}
 
-  @spec calculate_distance_sign(Note.note(), Note.note()) :: degree() | {:invalid, term()}
   @doc """
   符号计算，【不返回正负】。
 
   比方说一个八度里边 do 和 si 之间差七度，以及不同八度间 do 和 si 可能是二度、十五度。
   """
+  @spec calculate_distance_sign(Note.note(), Note.note()) :: degree() | {:invalid, term()}
   def calculate_distance_sign({key1, _, octave1} = note1, {key2, _, octave2} = note2) do
     key_diff = calc_note_steps({key1, octave1}, {key2, octave2})
 
@@ -44,13 +44,73 @@ defmodule QyMusic.Note.Distance do
     {:invalid, :maybe_has_rest_note}
   end
 
-  @doc """
-  计算频率。
-  """
+  @doc "计算频率。"
   @callback calculate_distance_pitch(
               base_note_and_pitch :: Note.note_and_frq(),
               target_note :: Note.note()
             ) :: number()
+
+  @doc "计算音符之间的半音数目。"
+  @spec calc_note_steps(
+          base :: Note.note() | {Note.note_name(), pos_integer()},
+          target :: Note.note() | {Note.note_name(), pos_integer()},
+          idx :: integer()
+        ) :: integer()
+  def calc_note_steps(base, target, idx \\ 0)
+
+  # 只用作比较音名，就是 xx 度
+  def calc_note_steps({base, _}, {target, _}, idx) when base == target, do: abs(idx) + 1
+
+  def calc_note_steps({base, octave1}, {target, octave2}, idx) do
+    # 只用作比较音名，所以升降无所谓
+    case Note.higher?({base, :natural, octave1}, {target, :natural, octave2}) do
+      true ->
+        new_note =
+          case down_opt(base) do
+            :b -> {down_opt(base), octave1 - 1}
+            _ -> {down_opt(base), octave1}
+          end
+
+        calc_note_steps(new_note, {target, octave2}, idx - 1)
+
+      false ->
+        new_note =
+          case up_opt(base) do
+            :c -> {up_opt(base), octave1 + 1}
+            _ -> {up_opt(base), octave1}
+          end
+
+        calc_note_steps(new_note, {target, octave2}, idx + 1)
+    end
+  end
+
+  def calc_note_steps({_, _, _} = base, {_, _, _} = target, idx) do
+    if Note.format(base) == Note.format(target) do
+      idx
+    else
+      case Note.higher?(base, target) do
+        true -> calc_note_steps(base |> down_opt(), target, idx - 1)
+        false -> calc_note_steps(base |> up_opt(), target, idx + 1)
+      end
+    end
+  end
+
+  # TODO: 计算某个音行多少音程后得到什么音
+  # @spec get_note_via_distance(Note.note(), degree(), direction :: :up | :down) :: Note.note()
+  def get_note_via_distance(source, {quanlity, key_diff} = _degree, direction \\ :up) do
+    raw_note = Note.format(source)
+
+    # _note_without_format =
+    # 这个函数需要将下面的 quanlity_mapper 反过来来获得具体的步数
+    get_gap_from_quanlity(quanlity, key_diff)
+    # 先通过半音数向上/下走到特定的音
+    |> then(&get_note_after_walking(raw_note, &1, direction))
+    |> Note.format()
+
+    # 再通过 Note.format/2 以及 key_diff 与实际两个音的差来实现标准化
+    # 可能会考虑过八度的情况 => 计算 octave_diff 分类讨论
+    # 但是暂时不考虑什么形如 C -> Ebb 之类的情况了（因为暂时不支持）
+  end
 
   # 上行音程
   singal_note_name_up_opt_map = %{
@@ -125,70 +185,6 @@ defmodule QyMusic.Note.Distance do
   def down_opt({:c, :natural, i}), do: {:b, :natural, i - 1}
 
   # def down_opt(source) when is_tuple(source), do: :invalid_note
-
-  @spec calc_note_steps(
-          base :: Note.note() | {Note.note_name(), pos_integer()},
-          target :: Note.note() | {Note.note_name(), pos_integer()},
-          idx :: integer()
-        ) :: integer()
-  @doc """
-  计算音符之间的半音数目。
-  """
-  def calc_note_steps(base, target, idx \\ 0)
-
-  # 只用作比较音名，就是 xx 度
-  def calc_note_steps({base, _}, {target, _}, idx) when base == target, do: abs(idx) + 1
-
-  def calc_note_steps({base, octave1}, {target, octave2}, idx) do
-    # 只用作比较音名，所以升降无所谓
-    case Note.higher?({base, :natural, octave1}, {target, :natural, octave2}) do
-      true ->
-        new_note =
-          case down_opt(base) do
-            :b -> {down_opt(base), octave1 - 1}
-            _ -> {down_opt(base), octave1}
-          end
-
-        calc_note_steps(new_note, {target, octave2}, idx - 1)
-
-      false ->
-        new_note =
-          case up_opt(base) do
-            :c -> {up_opt(base), octave1 + 1}
-            _ -> {up_opt(base), octave1}
-          end
-
-        calc_note_steps(new_note, {target, octave2}, idx + 1)
-    end
-  end
-
-  def calc_note_steps({_, _, _} = base, {_, _, _} = target, idx) do
-    if Note.format(base) == Note.format(target) do
-      idx
-    else
-      case Note.higher?(base, target) do
-        true -> calc_note_steps(base |> down_opt(), target, idx - 1)
-        false -> calc_note_steps(base |> up_opt(), target, idx + 1)
-      end
-    end
-  end
-
-  # TODO: 计算某个音行多少音程后得到什么音
-  # @spec get_note_via_distance(Note.note(), degree(), direction :: :up | :down) :: Note.note()
-  def get_note_via_distance(source, {quanlity, key_diff} = _degree, direction \\ :up) do
-    raw_note = Note.format(source)
-
-    # _note_without_format =
-    # 这个函数需要将下面的 quanlity_mapper 反过来来获得具体的步数
-    get_gap_from_quanlity(quanlity, key_diff)
-    # 先通过半音数向上/下走到特定的音
-    |> then(&get_note_after_walking(raw_note, &1, direction))
-    |> Note.format()
-
-    # 再通过 Note.format/2 以及 key_diff 与实际两个音的差来实现标准化
-    # 可能会考虑过八度的情况 => 计算 octave_diff 分类讨论
-    # 但是暂时不考虑什么形如 C -> Ebb 之类的情况了（因为暂时不支持）
-  end
 
   defp get_note_after_walking(source, 0, _direction), do: source
 
