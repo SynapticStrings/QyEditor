@@ -1,4 +1,8 @@
 defmodule QyCore.Recipe.Graph do
+  @moduledoc """
+  将一系列的 `%QyCore.Recipe.Step{}` 组合起来的图。
+  """
+
   alias QyCore.Recipe.{Step, Graph}
 
   @type t :: %__MODULE__{
@@ -23,7 +27,6 @@ end
 defmodule QyCore.Recipe.Graph.Builder do
   alias QyCore.Recipe.{Step, Graph}
 
-  @spec build_conn_from_steps([Step.t()]) :: Graph.t()
   def build_conn_from_steps(steps) do
     steps
     |> Enum.map(& &1.name_tuple)
@@ -100,7 +103,6 @@ defmodule QyCore.Recipe.Graph.Builder do
     raise "Catch an error buring #{name} with a number #{inspect(context)}"
   end
 
-  @spec get_graph_from_struct(Graph.t(), :digraph.graph()) :: :digraph.graph()
   def get_graph_from_struct(%Graph{} = graph_dict, graph \\ :digraph.new([])) do
     Enum.map(graph_dict.vertex, &:digraph.add_vertex(graph, &1))
     Enum.map(graph_dict.input_port, &:digraph.add_vertex(graph, &1))

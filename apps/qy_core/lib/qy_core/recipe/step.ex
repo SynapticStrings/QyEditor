@@ -1,86 +1,52 @@
 defmodule QyCore.Recipe.Step do
-  @enforce_keys [:name_tuple, :init, :call]
+  @moduledoc """
+  `Step` 是最小可执行、存有数据更新的步骤，其对 `t:inner_params/0` 或
+  `t:inner_params_with_context/0` 进行操作。
+
+  一个合格的 `%Step{}` **必须**包含以下的键值：
+
+  * `:name_tuple` 一个包含输入以及输出变量名的元组
+  * `:prepare` 一个负责处理参数的函数，其和 `Plug.init/1` 一致
+  * `:call` 一个依靠参数或共享上下文负责处理输入的函数，其和 `Plug.call/2` 一致
+    * 如果需要上下文的话需要三个 arity
+
+  此外，还有一个包括名字的 `:name` ，其会在 `QyCore.Recipe.Graph` 中被用到。
+  """
+
+alias QyCore.Recipe.Step
+
+  @enforce_keys [:name_tuple, :prepare, :call]
   @type t :: %__MODULE__{
           name: any(),
           name_tuple: name_keywords(),
-          init: function(),
+          prepare: function(),
           call: function()
         }
   defstruct [
     :name,
     :name_tuple,
-    :init,
+    :prepare,
     :call
   ]
 
-  alias QyCore.Recipe.Step
-
+  @typedoc "选项"
   @type options :: any()
 
+  @typedoc "上下文"
   @type context :: any()
 
+  @typedoc "输入的名字"
   @type input_name :: tuple()
 
+  @typedoc "输出的名字"
   @type output_name :: tuple()
 
   @type name_keywords :: {input_name(), output_name()}
 
   @type inner_params :: %{atom() => [any()]}
 
-  @spec prelude(inner_params(), input_name()) :: {inner_params(), tuple()}
-  def prelude(params, input_key) do
-    {
-      params,
-      input_key
-      |> :erlang.tuple_to_list()
-      |> Enum.map(fn k -> Map.get(params, k) end)
-      |> :erlang.list_to_tuple()
-    }
-  end
+  @type inner_params_with_context :: {inner_params(), context()}
 
-  @spec prelude(inner_params(), context(), tuple()) :: {inner_params(), context(), tuple()}
-  def prelude(params, context, input_key) do
-    {params, inputs} = prelude(params, input_key)
-
-    {params, context, inputs}
-  end
-
-  @spec exec_step({inner_params(), tuple()}, (any(), any() -> any()), options()) ::
-          {inner_params(), tuple()}
-  def exec_step({params, input}, func, opts) do
-    {params, func.(input, opts)}
-  end
-
-  @spec exec_step(
-          {inner_params(), context(), tuple()},
-          (any(), options(), context() -> {any(), any()}),
-          options()
-        ) ::
-          {inner_params(), tuple(), context()}
-  def exec_step({params, context, input}, func, opts) do
-    {output, new_context} = func.(input, opts, context)
-
-    {params, output, new_context}
-  end
-
-  @spec postlude({inner_params(), tuple()}, output_name()) :: inner_params()
-  def postlude({params, result}, output_key) do
-    result
-    |> then(
-      &(:erlang.tuple_to_list(output_key)
-        |> Enum.zip(:erlang.tuple_to_list(&1))
-        |> Enum.into(%{}))
-    )
-    |> then(&Map.merge(params, &1))
-  end
-
-  @spec postlude({inner_params(), tuple(), context()}, output_name()) ::
-          {inner_params(), context()}
-  def postlude({params, result, context}, output_key),
-    do: {postlude({params, result}, output_key), context}
-
-  @spec exec({inner_params(), context()} | inner_params(), Step.t()) ::
-          {inner_params(), context()} | inner_params()
   @doc """
   执行 `Step` 。
 
@@ -101,6 +67,8 @@ defmodule QyCore.Recipe.Step do
       ...> |> exec(step_3, [])
       ...> |> exec(step_4, [])
   """
+  @spec exec(inner_params() | inner_params_with_context(), Step.t()) ::
+          inner_params() | inner_params_with_context()
   def exec(params, step, opts \\ [])
 
   @spec exec(inner_params(), Step.t(), options()) :: inner_params()
@@ -108,35 +76,76 @@ defmodule QyCore.Recipe.Step do
         params,
         %__MODULE__{
           name_tuple: {input_key, output_key},
-          init: init_func,
+          prepare: init_func,
           call: call_func
         },
         opts
       )
-      when is_function(init_func, 1) and is_map(params) do
+      when is_function(init_func, 1) and is_function(call_func, 2) and is_map(params) do
     params
     |> prelude(input_key)
     |> exec_step(call_func, init_func.(opts))
     |> postlude(output_key)
   end
 
-  # 放一个额外的上下文在这
-  # 和 opts 不一样的是
-  # 这里的上下文也在后续更新 %Params{} 会被用到
-  @spec exec({inner_params(), context()}, Step.t(), options()) :: {inner_params(), context()}
+  @spec exec(inner_params_with_context(), Step.t(), options()) :: inner_params_with_context()
   def exec(
         {params, context},
         %__MODULE__{
           name_tuple: {input_key, output_key},
-          init: init_func,
+          prepare: init_func,
           call: call_func
         },
         extra_opts
       )
-      when is_function(init_func, 2) and is_function(call_func, 3) do
+      when is_function(init_func, 1) and is_function(call_func, 3) do
     params
     |> prelude(context, input_key)
-    |> exec_step(call_func, init_func.(context, extra_opts))
+    |> exec_step(call_func, init_func.(extra_opts))
     |> postlude(output_key)
   end
+
+  defp prelude(params, input_key) do
+    {
+      params,
+      input_key
+      |> :erlang.tuple_to_list()
+      |> Enum.map(fn k -> Map.get(params, k) end)
+      |> :erlang.list_to_tuple()
+    }
+  end
+
+  defp prelude(params, context, input_key) do
+    {params, inputs} = prelude(params, input_key)
+
+    {params, context, inputs}
+  end
+
+  defp exec_step({params, input}, func, opts) do
+    {params, func.(input, opts)}
+  end
+
+  defp exec_step({params, context, input}, func, opts) do
+    {output, new_context} = func.(input, opts, context)
+
+    {params, output, new_context}
+  end
+
+  defp postlude({params, result}, output_key) do
+    result
+    |> then(
+      &(:erlang.tuple_to_list(output_key)
+        |> Enum.zip(:erlang.tuple_to_list(&1))
+        |> Enum.into(%{}))
+    )
+    |> then(&Map.merge(params, &1))
+  end
+
+  defp postlude({params, result, context}, output_key),
+    do: {postlude({params, result}, output_key), context}
+
+end
+
+defmodule QyCore.Recipe.Step.Fusion do
+  # 将很多 Steps 进行融合
 end

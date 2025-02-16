@@ -4,21 +4,21 @@ alias QyCore.Recipe.{Step, Graph}
 step1 = %Step{
   name: :step1,
   name_tuple: {{:i1, :i2}, {:m1}},
-  init: & &1,
+  prepare: & &1,
   call: fn {a, b}, _ -> {a + b} end
 }
 
 step2 = %Step{
   name: :step2,
   name_tuple: {{:i2}, {:m2}},
-  init: & &1,
+  prepare: & &1,
   call: fn {a}, _ -> {a * 2} end
 }
 
 step3 = %Step{
   name: :step3,
   name_tuple: {{:m1, :m2}, {:o1}},
-  init: & &1,
+  prepare: & &1,
   call: fn {a, b}, _ -> {a * b} end
 }
 
@@ -28,7 +28,7 @@ defmodule Step4 do
   end
 
   def inject() do
-    %Step{name: :step4, name_tuple: {{:i1, :m1}, {:o2}}, init: & &1, call: &call/2}
+    %Step{name: :step4, name_tuple: {{:i1, :m1}, {:o2}}, prepare: & &1, call: &call/2}
   end
 end
 
