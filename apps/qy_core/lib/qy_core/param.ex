@@ -8,33 +8,13 @@ defmodule QyCore.Param do
 
   从 DDD 的角度出发，这里的参数属于 Value Object 。所以不需要 `id` 。
 
-  TODO: 为什么要设计这个模块
   设计该模块的目的是实现一系列和参数有关的逻辑以及定义一系列的接口以帮助或约束其他使用 `qy_core`
   的开发者使其更专注业务逻辑。
-
-  ## 一瞥————从案例入手
-
-  如果仅凭文字讲述可能过于抽象，因此将结合一个例子予以讲解。
-
-  在某使用场景需要将元音**音素序列**转变为**音频**以及对应的**舌位**中，
-  其将音素通过**声学特征**变为音频以及舌位。
-
-  ## 实现的功能
-
-  - 曲线工具
-  - 默认值以及检查验证
-  - **简单**操作（需要上下文以及模型操作的不会依照这套运行）
-    - 延长截短
-    - 截断合并
-
-  ## 如何使用？
-
-  请参见 `QyCore.Param.Proto` 。
-
   """
 
+  # 其中只有 name timestep sequence 和模型的生成（QyCore.Recipe）相关
+  # offset context extra 由用户以及编辑器来控制
   @type as_struct :: %__MODULE__{
-          # created_at: DateTime.t(),
           name: {param_name(), param_source()} | nil,
           timestep: number() | nil,
           offset: number(),
@@ -43,10 +23,6 @@ defmodule QyCore.Param do
           extra: map()
         }
   defstruct [
-    # 修改的时间
-    # 用在可能需要修改模型生成的参数的情景
-    # 其是具体的参数得到确定时的时间（只有曲线但是没有参数的情况就不算）
-    # :created_at,
     # 参数的名字
     # 包括参数的名字以及来源，这么区分是因为有些参数是手动修改的
     name: nil,
@@ -76,5 +52,6 @@ defmodule QyCore.Param do
   @typedoc "具体的参数名字（如果是模块可能是定义参数的模块）"
   @type param_name :: atom() | module()
   @typedoc "实际的类型包括 `t:as_struct/0` 、暂时没有数据的空值以及索引键的 `t:atom/0`"
+  # 作为索引的情况需要讨论
   @type t :: as_struct() | nil | atom()
 end
