@@ -15,7 +15,7 @@ defmodule QyCore.Param.BezierCurve do
   @type line_tuple :: {point_location(), point_location()}
 
   @typedoc "三阶贝塞尔曲线组成的曲线控制点的坐标"
-  @type third_scale_control_points :: [line_tuple()]
+  @type cubic_bezier_curves_control_points :: [line_tuple()]
 
   @typedoc "曲线本体"
   @type curve :: [point_location()]
@@ -57,6 +57,8 @@ defmodule QyCore.Param.BezierCurve do
   @doc """
   根据控制点绘制曲线。
 
+  理论上可以进行多次曲线，但最好考虑算力与插值的误差考虑。
+
   ## Param
 
   - `points` 控制点的坐标
@@ -66,7 +68,7 @@ defmodule QyCore.Param.BezierCurve do
   defdelegate draw(points, step), to: QyCore.Param.BezierCurve.Drawer
 
   # 从曲线本身反推控制点
-  # 这篇文章的算法返回的是三次贝塞尔曲线的控制点，如果需要多次的话另当讨论
+  # 这篇文章的算法返回的是三次贝塞尔曲线的控制点
   # https://jermmy.github.io/2016/08/01/2016-8-1-Bezier-Curve-SVG/
 
   ## 控制点的增减
