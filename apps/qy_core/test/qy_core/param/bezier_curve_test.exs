@@ -1,4 +1,4 @@
-defmodule QyCore.BexierCurveTest.Helpers do
+defmodule QyCore.BezierCurveTest.Helpers do
   # 需要一个 helper 来判断曲线是否经过某个区间/点
   # assert_passby / assert_include / assert_exclude
 
@@ -25,10 +25,10 @@ defmodule QyCore.BexierCurveTest.Helpers do
   end
 end
 
-defmodule QyCore.BexierCurveTest do
+defmodule QyCore.BezierCurveTest do
   use ExUnit.Case
 
-  import QyCore.BexierCurveTest.Helpers
+  import QyCore.BezierCurveTest.Helpers
 
   describe "测试 Helper" do
     test "assert_include" do
