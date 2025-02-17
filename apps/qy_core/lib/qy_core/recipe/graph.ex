@@ -22,6 +22,20 @@ defmodule QyCore.Recipe.Graph do
 
   @spec get_graph_from_struct(Graph.t(), :digraph.graph()) :: :digraph.graph()
   defdelegate get_graph_from_struct(graph_dict, graph \\ :digraph.new([])), to: Graph.Builder
+
+  @spec get_execution_order(Graph.t()) :: {:ok, [atom()]} | {:error, :cyclic}
+  def get_execution_order(%Graph{} = graph) do
+    g = get_graph_from_struct(graph)
+
+    # 仅对步骤节点（vertex）进行排序，过滤掉输入输出端口
+    vertex_only_graph =
+      :digraph_utils.subgraph(g, graph.vertex)
+
+    case :digraph_utils.topsort(vertex_only_graph) do
+      false -> {:error, :cyclic}
+      order -> {:ok, order}
+    end
+  end
 end
 
 defmodule QyCore.Recipe.Graph.Builder do
@@ -54,8 +68,8 @@ defmodule QyCore.Recipe.Graph.Builder do
           # 如果是边的话
           {name, :edge, Enum.map(as_from, &{Enum.at(as_to, 0), &1})}
 
-        context ->
-          {name, :error, {context, as_from, as_to}}
+        _context ->
+          {name, :error, :cyclic}
       end
     end)
     |> Enum.reduce(

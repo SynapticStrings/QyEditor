@@ -41,16 +41,20 @@ end
 
 ### USING GRAPH TO CONNECT NODE
 
-g =
+s =
   [step1, step2, step3, Step4.inject()]
   |> Graph.build_conn_from_steps()
-  # |> IO.inspect(label: :graph_dict)
+  |> IO.inspect(label: :graph_dict)
+
+g = s
   |> Graph.get_graph_from_struct()
-  # |> IO.inspect(label: :graph)
+  |> IO.inspect(label: :graph)
 #
 
-Graph.Helper.has_cycle?(g) |> IO.inspect(label: :cycle?)
+# Graph.Helper.has_cycle?(g) |> IO.inspect(label: :cycle?)
 
-:digraph_utils.topsort(g) |> IO.inspect(label: :topsort)
+{:ok, inner} = Graph.get_execution_order(s)
+
+IO.inspect(inner, label: :order)
 
 :digraph_utils.components(g) |> IO.inspect(label: :components)
