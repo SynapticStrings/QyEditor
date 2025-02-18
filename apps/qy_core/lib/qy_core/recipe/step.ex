@@ -29,6 +29,16 @@ alias QyCore.Recipe.Step
     :call
   ]
 
+  defmacro __using__(_opts) do
+    # 添加行为
+    # 实现 inject/0 函数，其会返回一个 %Step{} 对象
+    quote do
+      import QyCore.Recipe.Step
+
+      @behaviour QyCore.Recipe.Step
+    end
+  end
+
   @typedoc "选项"
   @type options :: any()
 
@@ -46,6 +56,12 @@ alias QyCore.Recipe.Step
   @type inner_params :: %{atom() => [any()]}
 
   @type inner_params_with_context :: {inner_params(), context()}
+
+  @callback name_tuple :: name_keywords()
+
+  @callback prepare(tuple(), options()) :: tuple()
+
+  # 思考剩下两个 callback 应该怎么实现
 
   @doc """
   执行 `Step` 。
