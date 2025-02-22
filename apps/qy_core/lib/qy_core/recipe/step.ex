@@ -8,7 +8,7 @@ defmodule QyCore.Recipe.Step do
   * `:name_tuple` 一个包含输入以及输出变量名的元组
   * `:prepare` 一个负责处理参数的函数，其和 `Plug.init/1` 一致
   * `:call` 一个依靠参数或共享上下文负责处理输入的函数，其和 `Plug.call/2` 一致
-    * 如果需要上下文的话需要三个 arity
+    * 虽然需要上下文的话也需要两个 arity ，但是其逻辑与没有上下文的函数**不一致**
 
   此外，还有一个包括名字的 `:name` ，其会在 `QyCore.Recipe.Graph` 中被用到。
   """
@@ -29,13 +29,24 @@ alias QyCore.Recipe.Step
     :call
   ]
 
+  @doc """
+  方便模块化使用 `QyCore.Recipe.Step` 。
+
+  ## Example
+
+      iex>
+      ...> steps = Module.create()
+  """
   defmacro __using__(_opts) do
-    # 添加行为
-    # 实现 inject/0 函数，其会返回一个 %Step{} 对象
+    # TODO
+    # 从 opts 中解析名字
     quote do
       import QyCore.Recipe.Step
 
       @behaviour QyCore.Recipe.Step
+
+      # 一旦 callback 均被实现，完成 inject/0 函数
+      # 该函数会返回一个 %Step{} 对象
     end
   end
 
@@ -45,7 +56,11 @@ alias QyCore.Recipe.Step
   @typedoc "上下文"
   @type context :: any()
 
-  @typedoc "输入的名字"
+  @typedoc """
+  函数的输入名字所组成的元组。
+
+  比方说 `{:a, :b}` 表示输入的名字是 `a` 和 `b`。
+  """
   @type input_name :: tuple()
 
   @typedoc "输出的名字"
@@ -53,6 +68,9 @@ alias QyCore.Recipe.Step
 
   @type name_keywords :: {input_name(), output_name()}
 
+  @typedoc """
+  `%Step{}` 处理参数的类型，其不包含上下文。
+  """
   @type inner_params :: %{atom() => [any()]}
 
   @type inner_params_with_context :: {inner_params(), context()}
@@ -60,6 +78,8 @@ alias QyCore.Recipe.Step
   @callback name_tuple :: name_keywords()
 
   @callback prepare(tuple(), options()) :: tuple()
+
+  @callback call(inner_params() | inner_params_with_context(), options()) :: inner_params() | inner_params_with_context()
 
   # 思考剩下两个 callback 应该怎么实现
 
@@ -114,7 +134,7 @@ alias QyCore.Recipe.Step
         },
         extra_opts
       )
-      when is_function(init_func, 1) and is_function(call_func, 3) do
+      when is_function(init_func, 1) and is_function(call_func, 2) and is_map(params) do
     params
     |> prelude(context, input_key)
     |> exec_step(call_func, init_func.(extra_opts))
@@ -142,7 +162,7 @@ alias QyCore.Recipe.Step
   end
 
   defp exec_step({params, context, input}, func, opts) do
-    {output, new_context} = func.(input, opts, context)
+    {output, new_context} = func.({input, context}, opts)
 
     {params, output, new_context}
   end
