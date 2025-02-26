@@ -4,12 +4,13 @@
 
 ## [WIP]Road Map
 
-- [ ] `QyCore.Param.BezireCurve`
+- [ ] `QyCore.BezireCurve`
   - [x] 控制点生成约束曲线
-  - [ ] 约束曲线生成参数序列
-  - [ ] 参数序列得到最相近的控制点
+  - [ ] 对曲线进行截断以及逆推出控制点
   - [ ] 三次曲线与多次曲线的相互转化
   - [ ] 最终与 `:qy_core` 业务的耦合
+    - [ ] 约束曲线与参数序列的互变
+    - [ ] ...
 - [ ] `QyCore.Recipe`
   - [x] 定义 `%QyCore.Recipe.Step{}` 结构体与模块
   - [x] `[%Step{}, ...]` 可被组合成有向无环图
@@ -27,7 +28,7 @@
 其主要包括：
 
 * 参数（`%QyCore.Param{}`）的管理
-  * 基于贝塞尔曲线的曲线工具（`QyCore.Param.BezierCurve`）
+  * 基于贝塞尔曲线的曲线工具（`QyCore.Param.Curve`）
 * 对参数的**操作**（`QyCore.Recipe`）
 * 对部分占用较大的参数（\[未定义\]）
   * 通过 `:ets` / `:dets` 进行保存

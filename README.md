@@ -8,8 +8,8 @@
 
 * 贝塞尔曲线/手绘的参数调节
 * 原生的增量计算与任务编排
-  * TODO: required example
   * Simulink / ComfyUI
+* 可扩展的应用
 
 ## 路线规划
 
