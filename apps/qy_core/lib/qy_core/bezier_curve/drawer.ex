@@ -1,6 +1,6 @@
-defmodule QyCore.Param.BezierCurve.Drawer do
+defmodule QyCore.BezierCurve.Drawer do
   # 实在不行就用 NIF 吧
-  alias QyCore.Param.BezierCurve
+  alias QyCore.BezierCurve
 
   # 这个函数抄的 https://developer.aliyun.com/article/678181
   # 有了不少魔改
