@@ -1,3 +1,4 @@
+alias QyCore.Recipe
 alias QyCore.Recipe.{Step, Graph}
 
 step1 = %Step{
@@ -65,18 +66,14 @@ _g =
   |> Graph.get_graph_from_struct()
   |> IO.inspect(label: :graph)
 
-### GET ORDER THE EXECUTE
+### GET ORDER TO EXECUTE
 
 {:ok, inner} = Graph.get_execution_order(s)
 
 IO.inspect(inner, label: :order)
 
 automatic_running_result =
-  Enum.reduce(inner, initial_prams,
-    fn step, acc ->
-      Step.exec(acc, step_mapper[step])
-    end
-  )
+  Recipe.execute(initial_prams, Enum.map(inner, fn name -> step_mapper[name] end), [])
   |> IO.inspect(label: :running)
 
 if automatic_running_result == mannual_operate_result do

@@ -4,4 +4,13 @@ defmodule QyCore.Recipe do
 
   其灵感来源于 [Plug](https://hexdocs.pm/plug/readme.html) 。
   """
+
+  alias QyCore.Recipe
+
+  @spec execute(any(), [Recipe.Step.t()], Recipe.Step.options()) :: any()
+  def execute(sector_init, [%Recipe.Step{} | _] = steps, opts) do
+    Enum.reduce(steps, sector_init, fn step, sector_current ->
+      Recipe.Step.exec(sector_current, step, opts)
+    end)
+  end
 end
