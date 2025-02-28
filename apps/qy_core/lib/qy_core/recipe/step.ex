@@ -13,7 +13,7 @@ defmodule QyCore.Recipe.Step do
   此外，还有一个包括名字的 `:name` ，其会在 `QyCore.Recipe.Graph` 中被用到。
   """
 
-alias QyCore.Recipe.Step
+  alias QyCore.Recipe.Step
 
   @enforce_keys [:name_tuple, :prepare, :call]
   @type t :: %__MODULE__{
@@ -45,8 +45,9 @@ alias QyCore.Recipe.Step
 
       @behaviour QyCore.Recipe.Step
 
-      # 一旦 callback 均被实现，完成 inject/0 函数
-      # 该函数会返回一个 %Step{} 对象
+      def init(opts), do: opts
+
+      defoverridable init: 1
     end
   end
 
@@ -79,7 +80,8 @@ alias QyCore.Recipe.Step
 
   @callback prepare(tuple(), options()) :: tuple()
 
-  @callback call(inner_params() | inner_params_with_context(), options()) :: inner_params() | inner_params_with_context()
+  @callback call(inner_params() | inner_params_with_context(), options()) ::
+              inner_params() | inner_params_with_context()
 
   # 思考剩下两个 callback 应该怎么实现
 
@@ -179,9 +181,30 @@ alias QyCore.Recipe.Step
 
   defp postlude({params, result, context}, output_key),
     do: {postlude({params, result}, output_key), context}
-
 end
 
 defmodule QyCore.Recipe.Step.Fusion do
   # 将很多 Steps 进行融合
+
+  # alias QyCore.Recipe
+
+  # def fusion(
+  #       %Recipe.Graph{input_port: inputs, output_port: outputs, vertex: [%Recipe.Step{} | _]} =
+  #         step_graph,
+  #       name,
+  #       opts \\ []
+  #     ) do
+  #   {:ok, inner} = step_graph |> Recipe.Graph.get_execution_order()
+
+  #   custome_prepare = Keyword.get(opts, :prepare, &(&1))
+
+  #   %Recipe.Step{
+  #     name: name,
+  #     name_tuple: {inputs, outputs},
+  #     prepare: custome_prepare,
+  #     call: fn params, opts ->
+  #       Recipe.execute(params, Enum.map(inner, &(&1)), opts)
+  #     end
+  #   }
+  # end
 end

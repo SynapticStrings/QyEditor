@@ -73,7 +73,7 @@ _g =
 IO.inspect(inner, label: :order)
 
 automatic_running_result =
-  Recipe.execute(initial_prams, Enum.map(inner, fn name -> step_mapper[name] end), [])
+  Recipe.execute(initial_prams, Enum.map(inner, fn name -> {step_mapper[name], []} end))
   |> IO.inspect(label: :running)
 
 if automatic_running_result == mannual_operate_result do

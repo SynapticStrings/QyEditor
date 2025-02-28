@@ -7,6 +7,13 @@ defmodule QyCore.Recipe do
 
   alias QyCore.Recipe
 
+  @spec execute(any(), [{Recipe.Step.t(), Recipe.Step.options()}]) :: any()
+  def execute(sector_init, [{%Recipe.Step{}, _} | _] = steps) do
+    Enum.reduce(steps, sector_init, fn {step, opts}, sector_current ->
+      Recipe.Step.exec(sector_current, step, opts)
+    end)
+  end
+
   @spec execute(any(), [Recipe.Step.t()], Recipe.Step.options()) :: any()
   def execute(sector_init, [%Recipe.Step{} | _] = steps, opts) do
     Enum.reduce(steps, sector_init, fn step, sector_current ->
