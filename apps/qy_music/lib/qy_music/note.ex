@@ -46,7 +46,7 @@ defmodule QyMusic.Note do
                         |> Enum.map(fn {k, v} -> {v, k} end)
                         |> Enum.into(%{})
   @var_convertor_to_text %{
-    ss: "ss",
+    ss: "##",
     sharp: "#",
     natural: "",
     flat: "b",
