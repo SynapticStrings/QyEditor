@@ -121,8 +121,8 @@ defmodule QyCore.Recipe.Graph.Builder do
     %{items | edge: edges ++ items[:edge]}
   end
 
-  defp update_format({name, :error, context}, _items) do
-    raise "Catch an error buring #{name} with a number #{inspect(context)}"
+  defp update_format({name, :error, reason}, items) do
+    raise "Catch an error buring #{name} with #{inspect(reason)} when process #{inspect(items)}"
   end
 
   def get_graph_from_struct(%Graph{} = graph_dict, graph \\ :digraph.new([])) do

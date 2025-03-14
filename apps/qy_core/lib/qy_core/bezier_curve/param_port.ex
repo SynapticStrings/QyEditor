@@ -8,17 +8,4 @@ defmodule QyCore.BezierCurve.ParamPort do
   # def curve_to_param_seq(curve, timestep), do: curve
 
   # def param_seq_to_curve(params, timestep), do: params
-
-  ## 检查曲线
-
-  # 同一个时间不存在两组参数
-  def single_param_in_same_time(curve) do
-    for {x, _} <- curve do
-      if Enum.count(curve, fn {x_, _} -> x == x_ end) > 1, do: x
-    end
-    |> case do
-      [] -> nil
-      p -> {:has_multiple_params, p}
-    end
-  end
 end
