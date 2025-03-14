@@ -23,9 +23,12 @@ defmodule QyCore.MixProject do
     ]
   end
 
-  # 不考虑依赖任何非标准库的应用或模块。
   defp deps do
-    [] ++ deps_doc()
+    [
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
+      {:stream_data, "~> 0.6", only: [:test]}
+    ] ++ deps_doc()
   end
 
   # 文档相关
