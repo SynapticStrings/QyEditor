@@ -10,7 +10,6 @@ defmodule QyCore.Recipe do
           name: atom() | nil,
           opts: keyword()
         }
-
   defstruct steps: [], name: nil, opts: []
 
   def new(steps, opts \\ []) do
@@ -22,5 +21,5 @@ defmodule QyCore.Recipe do
     }
   end
 
-  # def assign_options(steps, options) do
+  # def assign_options(%__MODULE__{steps: steps} = recipe, selector, new_opts) do
 end

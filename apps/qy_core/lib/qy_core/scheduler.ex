@@ -5,6 +5,9 @@ defmodule QyCore.Scheduler do
   @doc """
   初始化执行上下文。
   """
+  @spec build(QyCore.Recipe.t(), maybe_improper_list()) ::
+          {:error, {:missing_inputs, any(), list()}}
+          | {:ok, QyCore.Scheduler.Context.t()}
   def build(%Recipe{} = recipe, initial_params) when is_list(initial_params) do
     # 1. 稳健地构建 initial_map (防 Struct 匹配坑)
     initial_map =
