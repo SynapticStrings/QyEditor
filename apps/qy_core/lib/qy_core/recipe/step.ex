@@ -21,7 +21,7 @@ defmodule QyCore.Recipe.Step do
   @type input :: tuple() | Param.t()
   @type output :: tuple() | Param.t()
 
-  @type step_options :: term()
+  @type step_options :: keyword()
   @type running_options :: {:running, term()}
 
   @type step_schema :: {implementation(), input_keys(), output_keys()}
@@ -41,9 +41,13 @@ defmodule QyCore.Recipe.Step do
 
   ## public API
 
-  def inject_options({impl, in_keys, out_keys, opts}, {:step, new_opts}) do
-    merged_opts = Map.merge(opts, new_opts)
+  def inject_options({impl, in_keys, out_keys, opts}, new_opts) when is_map(new_opts) do
+    merged_opts = Enum.map(new_opts, &(&1)) ++ opts
     {impl, in_keys, out_keys, merged_opts}
+  end
+
+  def inject_options({impl, in_keys, out_keys, opts}, new_opts) when is_list(new_opts) do
+    {impl, in_keys, out_keys, Keyword.merge(opts, new_opts)}
   end
 
   def extract_schema({impl, in_keys, out_keys}), do: {impl, in_keys, out_keys}

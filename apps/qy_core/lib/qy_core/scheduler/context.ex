@@ -1,12 +1,13 @@
 defmodule QyCore.Scheduler.Context do
   alias QyCore.{Param, Recipe}
 
+  @type param_map :: %{optional(atom()) => Param.t()}
   @type t :: %__MODULE__{
           pending_steps: [Recipe.Step.t()],
           available_keys: MapSet.t(Recipe.Step.io_key()),
-          params: %{optional(atom()) => Param.t()},
+          params: param_map(),
           running_steps: MapSet.t(Recipe.Step.t()),
-          history: [{non_neg_integer(), %{optional(atom()) => Param.t()}}]
+          history: [{non_neg_integer(), param_map()}]
         }
   defstruct [
     :pending_steps,       # 还未执行的步骤列表 [{step, idx}]

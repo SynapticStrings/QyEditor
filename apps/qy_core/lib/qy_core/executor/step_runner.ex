@@ -3,14 +3,12 @@ defmodule QyCore.Executor.StepRunner do
   负责运行单个 Step 的原子操作。
   封装了：输入准备、Hook 触发、Reporter 注入、输出重命名。
   """
-  # TODO: 未来可考虑集成 Telemetry，简化 Hook 机制
-  # TODO: 对于存在两步的 steps ，考虑将 prepare 与 run 分离调用
   alias QyCore.Param
   import QyCore.Utilities, only: [ensure_full_step: 1]
 
   @spec run(
           QyCore.Recipe.Step.t(),
-          any(),
+          QyCore.Scheduler.Context.param_map(),
           nil | maybe_improper_list() | map()
         ) :: {:error, any()} | {:ok, [QyCore.Param.t()] | QyCore.Param.t()}
   def run(step, ctx_params, opts) do

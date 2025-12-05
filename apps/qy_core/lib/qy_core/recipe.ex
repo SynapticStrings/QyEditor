@@ -27,7 +27,7 @@ defmodule QyCore.Recipe do
   """
   def assign_options(%__MODULE__{} = recipe, selector, new_opts) do
     walk(recipe, fn step ->
-      {impl, in_k, out_k, current_opts} = ensure_full_step(step)
+      {impl, _in_k, _out_k, _current_opts} = ensure_full_step(step)
 
       # 判断是否匹配
       match? = case selector do
@@ -37,9 +37,7 @@ defmodule QyCore.Recipe do
       end
 
       if match? do
-        # 合并选项
-        merged_opts = Keyword.merge(current_opts, new_opts)
-        {impl, in_k, out_k, merged_opts}
+        Step.inject_options(ensure_full_step(step), new_opts)
       else
         step
       end
