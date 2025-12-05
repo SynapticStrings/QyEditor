@@ -4,11 +4,11 @@ defmodule QyCore.MixProject do
   def project do
     [
       app: :qy_core,
-      version: "0.1.3",
-      build_path: "../../_build",
-      config_path: "../../config/config.exs",
-      deps_path: "../../deps",
-      lockfile: "../../mix.lock",
+      version: "0.0.1",
+      build_path: "_build",
+      config_path: "config/config.exs",
+      deps_path: "deps",
+      lockfile: "mix.lock",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps()
@@ -25,16 +25,17 @@ defmodule QyCore.MixProject do
 
   defp deps do
     [
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
-      {:stream_data, "~> 0.6", only: [:test]}
+      # {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      # {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
+      # {:stream_data, "~> 0.6", only: [:test]}
     ] ++ deps_doc()
   end
 
   # 文档相关
 
   defp deps_doc do
-    [{:ex_doc, "~> 0.36", only: :dev, runtime: false}]
+    # [{:ex_doc, "~> 0.36", only: :dev, runtime: false}]
+    []
   end
 
   defp doc_opts do

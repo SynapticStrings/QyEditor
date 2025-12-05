@@ -1,145 +1,98 @@
 defmodule QyCore.Recipe.Graph do
   @moduledoc """
-  主要是关于将一系列的 `%QyCore.Recipe.Step{}`
-  组合起来的图结构以及对象（基于 `:digraph`）。
+  负责分析 Recipe 的拓扑结构，计算执行顺序，并进行静态检查。
   """
 
-  alias QyCore.Recipe.{Step, Graph}
+  alias QyCore.Recipe.Step
 
-  @type t :: %__MODULE__{
-          vertex: [atom()] | [],
-          orphans: [atom()] | [],
-          input_port: [atom()] | [],
-          output_port: [atom()] | [],
-          edge: [atom()] | []
+  @type error :: {:missing_inputs, step_idx :: integer(), missing :: [term()]}
+               | {:cycle_detected, remaining_steps :: [Step.t()]}
+
+  @doc """
+  对步骤进行拓扑排序。
+
+  输入：原始的步骤列表，以及（可选的）初始已知参数列表。
+  输出：{:ok, 排序后的步骤列表} 或 {:error, 原因}
+  """
+  @spec sort_steps([Step.t()], [atom()]) :: {:ok, [Step.t()]} | {:error, error()}
+  def sort_steps(steps, initial_params \\ []) do
+    # 1. 预处理：给每个步骤打上索引，方便报错定位，并规范化 input/output keys
+    indexed_steps =
+      steps
+      |> Enum.with_index()
+      |> Enum.map(fn {step, idx} ->
+        {_impl, in_keys, out_keys} = Step.extract_schema(step)
+        # 规范化：将单个 atom 转为 list，tuple 转为 list
+        needed = normalize_keys(in_keys)
+        provides = normalize_keys(out_keys)
+
+        %{
+          original: step,
+          index: idx,
+          needed: MapSet.new(needed),
+          provides: MapSet.new(provides)
         }
-  defstruct vertex: [], orphans: [], input_port: [], output_port: [], edge: []
+      end)
 
-  @doc """
-  从一系列的步骤中构建一个图（`%Graph{}` 结构）。
-  """
-  @spec build_conn_from_steps([Step.t()]) :: Graph.t()
-  defdelegate build_conn_from_steps(steps), to: Graph.Builder
+    # 2. 初始可用资源集合
+    available = MapSet.new(initial_params)
 
-  @doc """
-  从图结构中得到 `:digraph.graph()` 对象。
-  """
-  @spec get_graph_from_struct(Graph.t(), :digraph.graph()) :: :digraph.graph()
-  defdelegate get_graph_from_struct(graph_dict, graph \\ :digraph.new([])), to: Graph.Builder
+    # 3. 开始解析
+    do_sort(indexed_steps, available, [])
+  end
 
-  @spec get_execution_order(Graph.t()) :: {:ok, [atom()]} | {:error, :cyclic}
-  def get_execution_order(%Graph{} = graph) do
-    g = get_graph_from_struct(graph)
+  # 递归基：没有剩余步骤了，解析完成
+  defp do_sort([], _available, acc) do
+    {:ok, Enum.reverse(acc)}
+  end
 
-    # 仅对步骤节点（vertex）进行排序，过滤掉输入输出端口
-    vertex_only_graph =
-      :digraph_utils.subgraph(g, graph.vertex)
+  defp do_sort(remaining, available, acc) do
+    # 尝试在剩余步骤中，找到一个“所有输入都已被满足”的步骤
+    {ready, not_ready} = Enum.split_with(remaining, fn %{needed: needed} ->
+      MapSet.subset?(needed, available)
+    end)
 
-    case :digraph_utils.topsort(vertex_only_graph) do
-      false -> {:error, :cyclic}
-      order -> {:ok, order}
+    case ready do
+      [] ->
+        # 如果还有步骤剩余，但没有一个是 Ready 的，说明存在循环依赖或缺少输入
+        analyze_stuck_reason(remaining, available)
+
+      _ ->
+        # 将 Ready 的步骤加入结果集，并将其产出加入可用资源池
+        # 这里我们就简单的按列表顺序取，实际上如果支持并发，这里 ready 的都是可以并行的
+
+        # 这里的 new_available 累加了这些步骤的所有产出
+        new_produced =
+          ready
+          |> Enum.map(& &1.provides)
+          |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+
+        new_available = MapSet.union(available, new_produced)
+
+        # 提取原始 step 结构用于返回
+        ready_steps = Enum.map(ready, & &1.original)
+
+        do_sort(not_ready, new_available, Enum.reverse(ready_steps) ++ acc)
     end
   end
 
-  @spec get_step_from_vertex(atom(), [Step.t()]) :: Step.t() | nil
-  def get_step_from_vertex(name, steps), do: Enum.find(steps, &(&1.name == name))
+  defp analyze_stuck_reason(remaining, available) do
+    # 简单分析：检查第一个卡住的步骤缺什么
+    first_stuck = List.first(remaining)
+    missing =
+      MapSet.difference(first_stuck.needed, available)
+      |> MapSet.to_list()
 
-end
-
-defmodule QyCore.Recipe.Graph.Builder do
-  alias QyCore.Recipe.{Step, Graph}
-
-  def build_conn_from_steps(steps) do
-    steps
-    |> Enum.map(& &1.name_tuple)
-    |> Enum.reduce(
-      [],
-      fn {i, o}, acc -> Tuple.to_list(i) ++ Tuple.to_list(o) ++ acc end
-    )
-    |> Enum.uniq()
-    |> Enum.map(&{&1, get_steps_from_edge(&1, steps)})
-    |> Enum.map(fn {name, %{as_from: as_from, as_to: as_to}} ->
-      case {length(as_from), length(as_to)} do
-        {0, 0} ->
-          {name, :orphan}
-
-        {0, 1} ->
-          # 关于输入输出：
-          # port + 名字
-          # edge: {from_step, to_port}
-          {name, :output, {Enum.at(as_to, 0), name}}
-
-        {_, 0} ->
-          {name, :input, Enum.map(as_from, &{name, &1})}
-
-        {_, 1} ->
-          # 如果是边的话
-          {name, :edge, Enum.map(as_from, &{Enum.at(as_to, 0), &1})}
-
-        _context ->
-          {name, :error, :cyclic}
-      end
-    end)
-    |> Enum.reduce(
-      %{orphans: [], input_port: [], output_port: [], edge: []},
-      &update_format/2
-    )
-    |> Map.merge(%{vertex: Enum.map(steps, & &1.name)})
-    |> then(&struct!(Graph, &1))
+    if missing != [] do
+      {:error, {:missing_inputs, first_stuck.index, missing}}
+    else
+      # 如果看起来不缺输入（理论上不应走到这，除非逻辑有误），或是纯粹的死锁/环
+      {:error, {:cycle_detected, Enum.map(remaining, & &1.original)}}
+    end
   end
 
-  defp get_steps_from_edge(edge_name, steps) do
-    %{
-      as_from:
-        Enum.filter(steps, fn step ->
-          {from, _} = step.name_tuple
-          edge_name == from or edge_name in Tuple.to_list(from)
-        end)
-        |> Enum.map(fn %Step{name: name} -> name end),
-      as_to:
-        Enum.filter(steps, fn step ->
-          {_, to} = step.name_tuple
-          edge_name == to or edge_name in Tuple.to_list(to)
-        end)
-        |> Enum.map(fn %Step{name: name} -> name end)
-    }
-  end
-
-  defp update_format({name, :orphan}, items) do
-    %{items | orphans: [name | items[:orphans]]}
-  end
-
-  defp update_format({name, :output, edge}, items) do
-    %{items | output_port: [name | items[:output_port]], edge: [edge | items[:edge]]}
-  end
-
-  defp update_format({name, :input, edges}, items) do
-    %{items | input_port: [name | items[:input_port]], edge: edges ++ items[:edge]}
-  end
-
-  defp update_format({_name, :edge, edges}, items) do
-    %{items | edge: edges ++ items[:edge]}
-  end
-
-  defp update_format({name, :error, reason}, items) do
-    raise "Catch an error buring #{name} with #{inspect(reason)} when process #{inspect(items)}"
-  end
-
-  def get_graph_from_struct(%Graph{} = graph_dict, graph \\ :digraph.new([])) do
-    Enum.map(graph_dict.vertex, &:digraph.add_vertex(graph, &1))
-    Enum.map(graph_dict.input_port, &:digraph.add_vertex(graph, &1))
-    Enum.map(graph_dict.output_port, &:digraph.add_vertex(graph, &1))
-    Enum.map(graph_dict.edge, fn {from, to} -> :digraph.add_edge(graph, from, to) end)
-
-    graph
-  end
-end
-
-defmodule QyCore.Recipe.Graph.Helper do
-  @moduledoc """
-  主要是一些 utilities 的存在。
-  """
-
-  # 最大的度数
-  # 先不考虑边或节点的权重
+  # 辅助函数：将 keys 统一转为 list
+  defp normalize_keys(keys) when is_atom(keys), do: [keys]
+  defp normalize_keys(keys) when is_tuple(keys), do: Tuple.to_list(keys)
+  defp normalize_keys(keys) when is_list(keys), do: keys
 end
