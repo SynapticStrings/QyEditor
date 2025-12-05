@@ -10,17 +10,4 @@ defmodule QyCore do
 
   旨在实现一个通用的编辑器框架，以便于扩展和定制。
   """
-
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> QyCore.hello()
-      :world
-
-  """
-  def hello do
-    :world
-  end
 end

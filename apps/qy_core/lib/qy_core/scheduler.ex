@@ -1,4 +1,7 @@
 defmodule QyCore.Scheduler do
+  @moduledoc """
+  调度器模块，负责管理和调度 Recipe 中的步骤执行顺序。
+  """
   alias QyCore.Scheduler.Context
   alias QyCore.{Recipe, Param}
   import QyCore.Utilities, only: [normalize_keys_to_set: 1]
@@ -10,7 +13,7 @@ defmodule QyCore.Scheduler do
           {:error, {:missing_inputs, any(), list()}}
           | {:ok, QyCore.Scheduler.Context.t()}
   def build(%Recipe{} = recipe, initial_params) when is_list(initial_params) do
-    # 1. 稳健地构建 initial_map (防 Struct 匹配坑)
+    # 1. 构建 initial_map
     initial_map =
       Map.new(initial_params, fn param ->
         # 兼容 Struct 或 Map，只要有 name 字段即可

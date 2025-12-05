@@ -1,4 +1,6 @@
 defmodule QyCore.Utilities do
+  # 这些函数没有特别复杂，将来搞一下 doctest 也是可以的
+
   @doc """
   标准化步骤的输入输出键为 MapSet。
   """
