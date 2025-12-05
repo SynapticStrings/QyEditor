@@ -10,12 +10,13 @@ defmodule QyCore.Executor.Serial do
   @impl true
   def execute(recipe, initial_params, _opts \\ []) do
     case Scheduler.build(recipe, initial_params) do
-      {:ok, ctx} -> loop(ctx)
+      # TODO: 将来确定相关关系后 merge 下
+      {:ok, ctx} -> loop(ctx, recipe.opts)
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp loop(ctx, opts \\ []) do
+  defp loop(ctx, opts) do
     Scheduler.next_ready_steps(ctx)
 
     case Scheduler.next_ready_steps(ctx) do
@@ -30,7 +31,7 @@ defmodule QyCore.Executor.Serial do
       [{step, idx} | _] ->
         case QyCore.Executor.StepRunner.run(step, ctx.params, opts) do
           {:ok, renamed_output} ->
-            loop(Scheduler.merge_result(ctx, idx, renamed_output))
+            loop(Scheduler.merge_result(ctx, idx, renamed_output), opts)
 
           error ->
             error

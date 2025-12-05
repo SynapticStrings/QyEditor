@@ -1,4 +1,5 @@
 # Gemini 给出的例子，没有涉及到时间序列
+# 但是可以用容量来代替
 alias QyCore.Param
 
 defmodule MyKitchen do
@@ -8,11 +9,11 @@ defmodule MyKitchen do
     # 这里返回两个函数 {prepare, run}
     {
       fn opts -> {:ok, opts} end,
-      fn inputs, opts ->
-        # inputs 是一个 map 或 list，包含了 Param
-        # 模拟业务逻辑
+      fn inputs, _opts ->
+        podwer_size = length(inputs.payload) * 3
         IO.puts("⚙️  正在磨豆...")
-        {:ok, Param.new(:powder, :string, "香喷喷的粉")}
+        podwer = for _ <- 1..podwer_size, do: "香喷喷的粉"
+        {:ok, Param.new(:powder, :string, podwer)}
       end
     }
   end
@@ -21,7 +22,7 @@ defmodule MyKitchen do
   def brew(_opts) do
     {
       fn opts -> {:ok, opts} end,
-      fn _inputs, _opts ->
+      fn [_powder, _water], _opts ->
         IO.puts("💧 正在萃取...")
         {:ok, Param.new(:coffee_liquid, :string, "热咖啡液")}
       end
@@ -39,12 +40,13 @@ defmodule MyKitchen do
     }
   end
 
-  def to_guests(guests_name) do
+  def to_guests(_opts) do
     {
       fn opts -> {:ok, opts} end,
-      fn _inputs, _opts ->
-        IO.puts("☕️ 递给 #{guests_name} 一杯咖啡，享受吧！")
-        {:ok, Enum.map(guests_name, &Param.new(:served_coffee, :string, "递给 #{&1} 的咖啡")) |> List.to_tuple}
+      fn _inputs, opts ->
+        guest_name = opts[:name] || "客人"
+        IO.puts("☕️ 递给 #{guest_name} 一杯咖啡，享受吧！")
+        {:ok, Param.new(:served_coffee, :string, "递给 #{guest_name} 的咖啡")}
       end
     }
   end
@@ -53,17 +55,21 @@ end
 # --- 模拟框架运行 ---
 
 # 1. 初始食材 (我们手里只有这些)
+beans = for _ <- 1..5, do: "优质咖啡豆"
+water = for _ <- 1..500, do: "纯净水"
+sugar = for _ <- 1..20, do: "白砂糖"
+
 initial_params = %{
-  beans: Param.new(:beans, :string, "优质咖啡豆"),
-  water: Param.new(:water, :string, "纯净水"),
-  sugar: Param.new(:sugar, :string, "白砂糖")
+  beans: Param.new(:beans, :string, beans),
+  water: Param.new(:water, :string, water),
+  sugar: Param.new(:sugar, :string, sugar)
 }
 
 # 2. 定义 Recipe (注意：顺序是完全乱的！)
 # 格式: {实现, 输入key, 输出key}
 steps = [
   # 这一步本来应该是最后做的，但我写在了第一个
-  {MyKitchen.add_sugar([]), {:coffee_liquid, :sugar}, :sweet_coffee},
+  {MyKitchen.add_sugar([]), [:coffee_liquid, :sugar], :sweet_coffee},
 
   # 这一步是中间的
   {MyKitchen.brew([]), {:powder, :water}, :coffee_liquid},
@@ -72,11 +78,18 @@ steps = [
   {MyKitchen.grind([]), :beans, :powder},
 
   # 再加了一步递给客人
-  {MyKitchen.to_guests(["Alice", "Bob"]), :sweet_coffee, {:served_coffee_for_alice, :served_coffee_for_bob}}
+  {MyKitchen.to_guests([]), :sweet_coffee, :served_coffee}
 ]
 
-context_init = QyCore.Executor.Context.new(steps, initial_params)
-|> IO.inspect(label: "Context New Example")
+for guest <- ["Alice", "Bob", "Peter"] do
+  # 3. 执行 Recipe
+  {:ok, res} = steps
+  |> QyCore.Recipe.new(name: guest)
+  |> QyCore.Executor.Serial.execute(initial_params)
+  # 4. 输出结果
+  # |> IO.inspect(label: "Context New Example")
 
-next_ready_steps = QyCore.Executor.next_ready_steps(context_init)
-|> IO.inspect(label: "Next Ready Steps Example")
+  res[:served_coffee] |> IO.inspect(label: "Coffee")
+
+  IO.puts("🎉 #{guest} 收到了一杯美味的咖啡！")
+end

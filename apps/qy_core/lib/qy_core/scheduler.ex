@@ -12,13 +12,17 @@ defmodule QyCore.Scheduler do
   @spec build(QyCore.Recipe.t(), maybe_improper_list()) ::
           {:error, {:missing_inputs, any(), list()}}
           | {:ok, QyCore.Scheduler.Context.t()}
-  def build(%Recipe{} = recipe, initial_params) when is_list(initial_params) do
+  def build(%Recipe{} = recipe, initial_params) do
     # 1. 构建 initial_map
-    initial_map =
+    initial_map = case initial_params do
+      [_ | _] ->
       Map.new(initial_params, fn param ->
         # 兼容 Struct 或 Map，只要有 name 字段即可
         {Map.get(param, :name), param}
       end)
+
+      %{} -> initial_params
+    end
 
     initial_keys = Map.keys(initial_map)
 

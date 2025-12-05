@@ -1,4 +1,7 @@
 defmodule QyCore.Recipe.Step do
+  @moduledoc """
+  定义配方步骤（Step）的行为规范和类型。
+  """
   alias QyCore.Param
 
   @typedoc """
@@ -31,6 +34,9 @@ defmodule QyCore.Recipe.Step do
   @type t :: step_schema() | step_with_options()
 
   ## module step 实现的回调
+  # 这里借鉴了 Plug 的设计思想
+  # 但是和 Plug 不同的是，Step 的 prepare 和 run 均在运行时执行
+  # 因此 prepare 的主要职责是提取那些对 run 有影响的配置项
 
   @doc "对参数进行预处理"
   @callback prepare(options :: step_options()) :: {:ok, step_options()} | {:error, term()}
