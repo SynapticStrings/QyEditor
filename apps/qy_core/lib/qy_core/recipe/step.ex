@@ -37,6 +37,8 @@ defmodule QyCore.Recipe.Step do
 
   @callback run(input(), step_options()) :: {:ok, output()} | {:error, term()}
 
+  @callback nested?() :: boolean()
+
   ## public API
 
   def inject_options({impl, in_keys, out_keys}, opts, meta), do: {impl, in_keys, out_keys, opts, meta}
@@ -53,11 +55,14 @@ defmodule QyCore.Recipe.Step do
     quote do
       @behaviour QyCore.Recipe.Step
 
-      # 默认的 prepare 只是原样返回 opts
+      @impl true
       def prepare(opts), do: {:ok, opts}
 
-      # 允许覆盖
-      defoverridable prepare: 1
+      @impl true
+      def nested?(), do: false
+
+      defoverridable prepare: 1,
+                     nested?: 0
     end
   end
 end

@@ -71,14 +71,7 @@ defmodule QyCoreTest do
   use ExUnit.Case
   doctest QyCore
 
-  test "greets the world" do
-    assert QyCore.hello() == :world
-  end
-
   alias QyCore.Executor.Serial
-
-  # 引用上面的 Steps 模块
-  alias QySynth.Steps.{Denoise, PitchFix, Mix}
 
   test "runs the vocal mixing pipeline successfully" do
     # 1. 准备初始素材 (Payload 是 List)
@@ -189,5 +182,52 @@ defmodule QyCore.NestedTest do
 
     expected = ["Mix[Vocal1_denoised_tuned + Beat1]"]
     assert payload == expected
+  end
+end
+
+defmodule QyCore.WalkTest do
+  use ExUnit.Case
+  alias QyCore.Recipe
+  alias QyCore.Recipe.NestedStep
+  alias QySynth.Steps.Mix
+
+  test "assign_options penetrates into nested recipes" do
+    # 1. 构建最内层 Recipe (Sub-Sub-Recipe)
+    inner_recipe = Recipe.new([
+      {Mix, :in, :out} # 这里的 opts 此时是空的
+    ])
+
+    # 2. 构建中间层 Recipe (包含 NestedStep)
+    middle_steps = [
+      {NestedStep, :a, :b, [recipe: inner_recipe]}
+    ]
+    middle_recipe = Recipe.new(middle_steps)
+
+    # 3. 构建最外层 Recipe
+    outer_steps = [
+      {NestedStep, :x, :y, [recipe: middle_recipe]}
+    ]
+    outer_recipe = Recipe.new(outer_steps)
+
+    # --- 行动：在最顶层注入配置 ---
+    # 我们希望所有的 Mix 步骤（不管藏多深）都带上 sample_rate: 48000
+    updated_recipe = Recipe.assign_options(outer_recipe, Mix, sample_rate: 48000)
+
+    # --- 验证 ---
+    # 这一步比较繁琐，因为要手动解包，但逻辑上就是剥洋葱
+
+    # 第 1 层剥开
+    {_, _, _, opts1, _} = hd(updated_recipe.steps) # 外层 NestedStep
+    middle = opts1[:recipe]
+
+    # 第 2 层剥开
+    {_, _, _, opts2, _} = hd(middle.steps) # 中间层 NestedStep
+    inner = opts2[:recipe]
+
+    # 第 3 层：终于见到了 Mix
+    {impl, _, _, final_opts, _} = hd(inner.steps)
+
+    assert impl == Mix
+    assert final_opts[:sample_rate] == 48000
   end
 end

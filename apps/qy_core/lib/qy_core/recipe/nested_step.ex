@@ -21,6 +21,8 @@ defmodule QyCore.Recipe.NestedStep do
 
   use QyCore.Recipe.Step
 
+  def nested?, do: true
+
   def prepare(opts) do
     inner_recipe = Keyword.fetch!(opts, :recipe)
     executor = Keyword.get(opts, :executor, QyCore.Executor.Serial)
