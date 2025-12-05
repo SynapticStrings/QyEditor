@@ -10,7 +10,7 @@ defmodule QyCore.Executor.Serial do
     end
   end
 
-  defp loop(ctx) do
+  defp loop(ctx, opts \\ []) do
     Scheduler.next_ready_steps(ctx)
 
     case Scheduler.next_ready_steps(ctx) do
@@ -23,14 +23,10 @@ defmodule QyCore.Executor.Serial do
 
       # 串行只取第一个
       [{step, idx} | _] ->
-        {impl, in_keys, out_keys, step_opts, _meta} = ensure_full_step(step)
-
-        # 准备参数
-        inputs = prepare_inputs(in_keys, ctx.params)
+        {_impl, _in_keys, out_keys, _step_opts, _meta} = ensure_full_step(step)
 
         # 执行 (这里假设 impl 是一个实现了 QyCore.Recipe.Step 的模块)
-        # TODO: 这里应该处理 prepare，但在 Serial 模式简化为运行时调用
-        case run_step(impl, inputs, step_opts) do
+        case QyCore.Executor.StepRunner.run(step, ctx.params, opts) do
           {:ok, raw_output} ->
             renamed_output = align_output_names(raw_output, out_keys)
 
@@ -61,46 +57,6 @@ defmodule QyCore.Executor.Serial do
   defp align_output_names(%Param{} = param, [out_key]) do
     [%{param | name: out_key}]
   end
-
-  defp prepare_inputs(keys, params) when is_list(keys) do
-    Enum.map(keys, &Map.fetch!(params, &1))
-  end
-
-  defp prepare_inputs(key, params), do: Map.fetch!(params, key)
-
-  defp run_step(impl, inputs, opts) when is_atom(impl) do
-    if Code.ensure_loaded?(impl) and function_exported?(impl, :run, 2) do
-      if function_exported?(impl, :prepare, 1) do
-        with {:ok, prepared_opts} <- impl.prepare(opts),
-           {:ok, result} <- impl.run(inputs, prepared_opts) do
-
-           {:ok, result}
-        else
-          {:error, reason} -> {:error, reason}
-        end
-      else
-        impl.run(inputs, opts)
-      end
-
-    else
-      # 简单的容错，防止 impl 不是模块的情况（虽然 schema 校验过）
-      {:error, {:invalid_step_implementation, impl}}
-    end
-  end
-
-  defp run_step({prepare_fun, run_fun}, inputs, opts)
-       when is_function(prepare_fun, 1) and is_function(run_fun, 2) do
-    case prepare_fun.(opts) do
-      {:ok, prepared_opts} -> run_fun.(inputs, prepared_opts)
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp run_step(run_fun, inputs, opts) when is_function(run_fun, 2) do
-    run_fun.(inputs, opts)
-  end
-
-  defp run_step(_, _, _), do: {:error, :invalid_step_implementation}
 
   defp ensure_full_step({impl, in_k, out_k}), do: {impl, in_k, out_k, [], []}
   defp ensure_full_step({impl, in_k, out_k, opts}), do: {impl, in_k, out_k, opts, []}
