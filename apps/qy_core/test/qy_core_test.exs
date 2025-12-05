@@ -36,6 +36,37 @@ defmodule QySynth.Steps.Mix do
   end
 end
 
+alias QyCore.{Param, Recipe}
+alias QySynth.Steps.{Denoise, PitchFix}
+
+vocal_chain_steps = [
+  {Denoise, :raw_audio, :clean_audio},
+  {PitchFix, :clean_audio, :tuned_audio}
+]
+
+_vocal_chain_recipe = Recipe.new(vocal_chain_steps, name: :vocal_chain)
+
+main_steps = [
+  # --- 嵌套步骤 ---
+  {
+    Recipe.NestedStep,
+    :microphone_input,
+    :ready_vocal,
+    # Options
+    [
+      recipe: Recipe.new(vocal_chain_steps, name: :vocal_chain),
+      # 映射: 主流程名 => 子流程名
+      input_map: %{microphone_input: :raw_audio},
+      # 映射: 子流程名 => 主流程名
+      output_map: %{tuned_audio: :ready_vocal}
+    ]
+  },
+
+  {Mix, [:ready_vocal, :bgm], :final_track}
+]
+
+main_recipe = Recipe.new(main_steps, name: :main_mix)
+
 defmodule QyCoreTest do
   use ExUnit.Case
   doctest QyCore
@@ -44,7 +75,6 @@ defmodule QyCoreTest do
     assert QyCore.hello() == :world
   end
 
-  alias QyCore.{Param, Recipe}
   alias QyCore.Executor.Serial
 
   # 引用上面的 Steps 模块
@@ -88,9 +118,9 @@ defmodule QyCoreTest do
   end
 
   test "detects stuck execution (missing dependency)" do
-    # 故意少给 BGM
     initial_params = [
       Param.new(:raw_vocal, :audio, ["V1"])
+      # 无 BGM
     ]
 
     steps = [
@@ -102,6 +132,60 @@ defmodule QyCoreTest do
     recipe = Recipe.new(steps)
 
     # 预期报错
-    assert {:error, :stuck} = Serial.execute(recipe, initial_params)
+    assert {:error, {:missing_inputs, _index, [:tuned_vocal, :bgm]}} = Serial.execute(recipe, initial_params)
+  end
+end
+
+defmodule QyCore.NestedTest do
+  use ExUnit.Case
+  alias QyCore.Executor.Serial
+  alias QyCore.Recipe.NestedStep, as: Nested
+
+  test "executes nested recipe correctly with param mapping" do
+    # 1. 准备子 Recipe
+    child_recipe = Recipe.new([
+      {Denoise, :child_raw, :child_clean},
+      {PitchFix, :child_clean, :child_tuned}
+    ])
+
+    # 2. 准备主 Recipe
+    main_recipe = Recipe.new([
+      {
+        Nested,
+        :parent_raw,      # 主流程提供的输入
+        :parent_result,   # 主流程期望的输出
+        [
+          recipe: child_recipe,
+          input_map: %{parent_raw: :child_raw},      # 桥接: parent -> child
+          output_map: %{child_tuned: :parent_result} # 桥接: child -> parent
+        ]
+      },
+      # 验证输出是否可用
+      {Mix, [:parent_result, :bgm], :final_mix}
+    ])
+
+    # 3. 初始数据
+    initial_params = [
+      Param.new(:parent_raw, :audio, ["Vocal1"]),
+      Param.new(:bgm, :audio, ["Beat1"])
+    ]
+
+    # 4. 运行
+    assert {:ok, results} = Serial.execute(main_recipe, initial_params)
+
+    # 5. 验证
+    final = results[:final_mix]
+    payload = Param.get_payload(final)
+
+    # 逻辑链:
+    # Vocal1 (parent_raw)
+    # -> map to :child_raw
+    # -> Denoise -> Vocal1_denoised
+    # -> PitchFix -> Vocal1_denoised_tuned (child_tuned)
+    # -> map to :parent_result
+    # -> Mix with Beat1
+
+    expected = ["Mix[Vocal1_denoised_tuned + Beat1]"]
+    assert payload == expected
   end
 end

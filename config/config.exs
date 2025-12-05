@@ -14,57 +14,7 @@ import Config
 #       metadata: [:user_id]
 #
 
-## WebUI 部分
-
-config :web_ui,
-  namespace: WebUI,
-  generators: [context_app: false]
-
-# 配置端点
-config :web_ui, WebUI.Endpoint,
-  url: [host: "localhost"],
-  adapter: Bandit.PhoenixAdapter,
-  render_errors: [
-    formats: [html: WebUI.ErrorHTML, json: WebUI.ErrorJSON],
-    layout: false
-  ],
-  pubsub_server: WebUI.PubSub,
-  live_view: [signing_salt: "YC6yG9Jt"]
-
-# 配置 esbuild （需要版本号）
-config :esbuild,
-  version: "0.17.11",
-  web_ui: [
-    args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../apps/web_ui/assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ]
-
-# 配置 tailwind （需要版本号）
-config :tailwind,
-  version: "3.4.3",
-  web_ui: [
-    args: ~w(
-      --config=tailwind.config.js
-      --input=css/app.css
-      --output=../priv/static/assets/app.css
-    ),
-    cd: Path.expand("../apps/web_ui/assets", __DIR__)
-  ]
-
 # 配置 Elixir 日志
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
-
-# 在 Phoenix 中使用 Jason 来解析 JSON
-config :phoenix, :json_library, Jason
-
-# 将简体中文设置为缺省语言
-config :gettext,
-  default_locale: "zh_CN",
-  locales: ~w(en zh_CN)
-
-# 依据环境导入不同的配置，这一行必须在文件的最后因此其他配置其可以覆写上面的。
-import_config "#{config_env()}.exs"
