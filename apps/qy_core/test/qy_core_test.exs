@@ -217,15 +217,15 @@ defmodule QyCore.WalkTest do
     # 这一步比较繁琐，因为要手动解包，但逻辑上就是剥洋葱
 
     # 第 1 层剥开
-    {_, _, _, opts1, _} = hd(updated_recipe.steps) # 外层 NestedStep
+    {_, _, _, opts1} = hd(updated_recipe.steps) # 外层 NestedStep
     middle = opts1[:recipe]
 
     # 第 2 层剥开
-    {_, _, _, opts2, _} = hd(middle.steps) # 中间层 NestedStep
+    {_, _, _, opts2} = hd(middle.steps) # 中间层 NestedStep
     inner = opts2[:recipe]
 
     # 第 3 层：终于见到了 Mix
-    {impl, _, _, final_opts, _} = hd(inner.steps)
+    {impl, _, _, final_opts} = hd(inner.steps)
 
     assert impl == Mix
     assert final_opts[:sample_rate] == 48000

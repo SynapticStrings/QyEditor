@@ -27,7 +27,7 @@ defmodule QyCore.Recipe do
   """
   def assign_options(%__MODULE__{} = recipe, selector, new_opts) do
     walk(recipe, fn step ->
-      {impl, in_k, out_k, current_opts, meta} = ensure_full_step(step)
+      {impl, in_k, out_k, current_opts} = ensure_full_step(step)
 
       # 判断是否匹配
       match? = case selector do
@@ -39,7 +39,7 @@ defmodule QyCore.Recipe do
       if match? do
         # 合并选项
         merged_opts = Keyword.merge(current_opts, new_opts)
-        {impl, in_k, out_k, merged_opts, meta}
+        {impl, in_k, out_k, merged_opts}
       else
         step
       end
@@ -62,7 +62,7 @@ defmodule QyCore.Recipe do
   end
 
   defp process_nested(step, func) do
-    {impl, in_k, out_k, opts, meta} = ensure_full_step(step)
+    {impl, in_k, out_k, opts} = ensure_full_step(step)
 
     if is_atom(impl) and function_exported?(impl, :nested?, 0) and impl.nested?() do
       case Keyword.get(opts, :recipe) do
@@ -70,7 +70,7 @@ defmodule QyCore.Recipe do
           new_inner_recipe = walk(inner_recipe, func)
 
           new_opts = Keyword.put(opts, :recipe, new_inner_recipe)
-          {impl, in_k, out_k, new_opts, meta}
+          {impl, in_k, out_k, new_opts}
 
         _ ->
           step

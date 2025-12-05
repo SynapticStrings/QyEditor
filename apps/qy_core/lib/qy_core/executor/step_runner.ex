@@ -6,7 +6,7 @@ defmodule QyCore.Executor.StepRunner do
   # TODO: 未来可考虑集成 Telemetry，简化 Hook 机制
   # TODO: 对于存在两步的 steps ，考虑将 prepare 与 run 分离调用
   alias QyCore.Param
-  import QyCore.Utilities, only: [ensure_full_step: 1, normalize_keys: 1]
+  import QyCore.Utilities, only: [ensure_full_step: 1]
 
   @spec run(
           QyCore.Recipe.Step.t(),
@@ -14,7 +14,7 @@ defmodule QyCore.Executor.StepRunner do
           nil | maybe_improper_list() | map()
         ) :: {:error, any()} | {:ok, [QyCore.Param.t()] | QyCore.Param.t()}
   def run(step, ctx_params, opts) do
-    {impl, in_keys, out_keys, step_opts, _meta} = ensure_full_step(step)
+    {impl, in_keys, out_keys, step_opts} = ensure_full_step(step)
 
     telemetry_metadata = %{
       impl: impl,
@@ -104,7 +104,7 @@ defmodule QyCore.Executor.StepRunner do
   end
 
   defp align_output_names(params, out_keys) when is_list(params) do
-    keys = normalize_keys(out_keys)
+    keys = List.wrap(out_keys)
     Enum.zip_with(params, keys, fn param, key -> %{param | name: key} end)
   end
 

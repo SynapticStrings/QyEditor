@@ -10,9 +10,10 @@ defmodule QyCore.Recipe.Step do
   * 模块实现：直接指定一个模块名，要求该模块实现 `QyCore.Recipe.Step` 行为。
   * 单函数实现：指定一个函数，等同于只实现 `run/2` 回调。
   """
-  @type implementation :: module()
-  | function()
-  | nil
+  @type implementation ::
+          module()
+          | function()
+          | nil
 
   @type io_key :: atom() | [atom()] | tuple() | MapSet.t()
   @type input_keys :: io_key()
@@ -25,10 +26,11 @@ defmodule QyCore.Recipe.Step do
 
   @type step_schema :: {implementation(), input_keys(), output_keys()}
   @type step_with_options :: {
-    implementation(), input_keys(), output_keys(),
-    # 这里将 step_options 放在元组中是为了方便在运行时对最后的 metadata/running_options 进行注入和修改
-    step_options(), keyword()
-  }
+          implementation(),
+          input_keys(),
+          output_keys(),
+          step_options()
+        }
   @type t :: step_schema() | step_with_options()
 
   ## module step 实现的回调
@@ -39,15 +41,13 @@ defmodule QyCore.Recipe.Step do
 
   ## public API
 
-  def inject_options({impl, in_keys, out_keys}, opts, meta), do: {impl, in_keys, out_keys, opts, meta}
-  def inject_options({impl, in_keys, out_keys, opts, meta}, {:step, new_opts}) do
+  def inject_options({impl, in_keys, out_keys, opts}, {:step, new_opts}) do
     merged_opts = Map.merge(opts, new_opts)
-    {impl, in_keys, out_keys, merged_opts, meta}
+    {impl, in_keys, out_keys, merged_opts}
   end
 
   def extract_schema({impl, in_keys, out_keys}), do: {impl, in_keys, out_keys}
   def extract_schema({impl, in_keys, out_keys, _opts}), do: {impl, in_keys, out_keys}
-  def extract_schema({impl, in_keys, out_keys, _opts, _meta}), do: {impl, in_keys, out_keys}
 
   defmacro __using__(_opts) do
     quote do
