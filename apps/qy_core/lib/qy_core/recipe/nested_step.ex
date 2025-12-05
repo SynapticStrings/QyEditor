@@ -23,27 +23,12 @@ defmodule QyCore.Recipe.NestedStep do
 
   def nested?, do: true
 
-  def prepare(opts) do
+  def run(input_params, opts) do
     inner_recipe = Keyword.fetch!(opts, :recipe)
     executor = Keyword.get(opts, :executor, QyCore.Executor.Serial)
     input_map = Keyword.get(opts, :input_map, %{})
     output_map = Keyword.get(opts, :output_map, %{})
 
-    {:ok, [
-      recipe: inner_recipe,
-      executor: executor,
-      input_map: input_map,
-      output_map: output_map
-    ]}
-  end
-
-  def run(input_params, [
-        recipe: inner_recipe,
-        executor: executor,
-        input_map: input_map,
-        output_map: output_map
-      ]) do
-    # 1. 准备输入
     # 将父层传进来的 Params 重命名为子层需要的名字
     child_initial_params =
       input_params
@@ -54,13 +39,11 @@ defmodule QyCore.Recipe.NestedStep do
         %{param | name: new_name}
       end)
 
-    # 2. 启动子流程
-    # 这是一个递归调用，但发生在 Executor 层面
+    # 启动子流程
     case executor.execute(inner_recipe, child_initial_params) do
       {:ok, inner_results} ->
         # inner_results 是 %{name => Param}
 
-        # 3. 提取输出
         # 根据 output_map 或默认规则，从子结果中提取父层需要的数据
         # 这里的 output_map key 是子层名字，value 是父层名字
 

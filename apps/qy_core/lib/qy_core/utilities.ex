@@ -16,7 +16,6 @@ defmodule QyCore.Utilities do
   def ensure_full_step({impl, in_k, out_k}), do: {impl, in_k, out_k, [], []}
   def ensure_full_step({impl, in_k, out_k, opts}), do: {impl, in_k, out_k, opts, []}
   def ensure_full_step({impl, in_k, out_k, opts, meta}), do: {impl, in_k, out_k, opts, meta}
-  def ensure_full_step({impl, in_k, out_k}, opts), do: {impl, in_k, out_k, opts, []}
 
   @doc """
   标准化输出名称。

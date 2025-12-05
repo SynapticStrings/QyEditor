@@ -8,12 +8,10 @@ defmodule QyCore.Recipe.Step do
   目前包括三类实现：
 
   * 模块实现：直接指定一个模块名，要求该模块实现 `QyCore.Recipe.Step` 行为。
-  * 函数对实现：指定一个包含两个函数的元组，分别对应 `prepare/1` 和 `run/2` 回调。
-  * 单函数实现：指定一个函数，等同于只实现 `run/2` 回调，`prepare/1` 为 &(&1) ，不会进行其他操作。
+  * 单函数实现：指定一个函数，等同于只实现 `run/2` 回调。
   """
   @type implementation :: module()
-  | {function(), function()} |
-  function()
+  | function()
   | nil
 
   @type io_key :: atom() | [atom()] | tuple() | MapSet.t()
@@ -34,12 +32,6 @@ defmodule QyCore.Recipe.Step do
   @type t :: step_schema() | step_with_options()
 
   ## module step 实现的回调
-  # 这里借鉴了 Plug 的设计思想
-  # 但是和 Plug 不同的是，Step 的 prepare 和 run 均在运行时执行
-  # 因此 prepare 的主要职责是提取那些对 run 有影响的配置项
-
-  @doc "对参数进行预处理"
-  @callback prepare(options :: step_options()) :: {:ok, step_options()} | {:error, term()}
 
   @callback run(input(), step_options()) :: {:ok, output()} | {:error, term()}
 
@@ -62,9 +54,6 @@ defmodule QyCore.Recipe.Step do
       @behaviour QyCore.Recipe.Step
 
       @impl true
-      def prepare(opts), do: {:ok, opts}
-
-      @impl true
       def nested?(), do: false
 
       @doc """
@@ -80,8 +69,7 @@ defmodule QyCore.Recipe.Step do
         end
       end
 
-      defoverridable prepare: 1,
-                     nested?: 0
+      defoverridable nested?: 0
     end
   end
 end

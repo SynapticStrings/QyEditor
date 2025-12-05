@@ -6,6 +6,8 @@ defmodule QyCore.Recipe.Graph do
   alias QyCore.Recipe.Step
   import QyCore.Utilities, only: [normalize_keys_to_set: 1]
 
+  @spec validate([Step.t()], Step.input_keys()) ::
+          :ok | {:error, {:missing_inputs, non_neg_integer(), [Step.input_keys()]}}
   def validate(steps, initial_keys) do
     # 确保 initial_keys 是 MapSet
     available = MapSet.new(initial_keys)
@@ -16,6 +18,7 @@ defmodule QyCore.Recipe.Graph do
       |> Enum.with_index()
       |> Enum.map(fn {step, idx} ->
         {_impl, in_k, out_k} = Step.extract_schema(step)
+
         %{
           index: idx,
           step: step,
@@ -31,11 +34,13 @@ defmodule QyCore.Recipe.Graph do
   end
 
   defp simulate_run([], _available), do: :ok
+
   defp simulate_run(pending, available) do
     # 核心逻辑：找出所有需求被满足的步骤
-    {ready, not_ready} = Enum.split_with(pending, fn %{needed: needed} ->
-      MapSet.subset?(needed, available)
-    end)
+    {ready, not_ready} =
+      Enum.split_with(pending, fn %{needed: needed} ->
+        MapSet.subset?(needed, available)
+      end)
 
     case ready do
       [] ->

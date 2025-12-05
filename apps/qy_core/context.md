@@ -45,7 +45,7 @@
     *   **`Recipe.walk/2`**：实现了类似 AST 的树遍历，用于全局配置注入 (`assign_options`)。
 *   **`QyCore.Recipe.Step`**：
     *   计算单元。通过 `use QyCore.Recipe.Step` 定义。
-    *   包含 `prepare/1` (编译期/构建期) 和 `run/2` (运行期)。
+    *   包含 `run/2` (运行期)。
 
 #### **C. 调度与执行层 (核心引擎)**
 *   **`QyCore.Scheduler` (The Brain)**：

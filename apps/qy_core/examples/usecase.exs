@@ -6,49 +6,36 @@ defmodule MyKitchen do
 
   # 1. 定义磨豆步骤 (输入: :beans -> 输出: :powder)
   def grind(_opts) do
-    # 这里返回两个函数 {prepare, run}
-    {
-      fn opts -> {:ok, opts} end,
-      fn inputs, _opts ->
+    fn inputs, _opts ->
         podwer_size = length(inputs.payload) * 3
         IO.puts("⚙️  正在磨豆...")
         podwer = for _ <- 1..podwer_size, do: "香喷喷的粉"
         {:ok, Param.new(:powder, :string, podwer)}
       end
-    }
   end
 
   # 2. 定义萃取步骤 (输入: {:powder, :water} -> 输出: :coffee_liquid)
   def brew(_opts) do
-    {
-      fn opts -> {:ok, opts} end,
-      fn [_powder, _water], _opts ->
+    fn [_powder, _water], _opts ->
         IO.puts("💧 正在萃取...")
         {:ok, Param.new(:coffee_liquid, :string, "热咖啡液")}
       end
-    }
   end
 
   # 3. 定义加糖步骤 (输入: {:coffee_liquid, :sugar} -> 输出: :sweet_coffee)
   def add_sugar(_opts) do
-    {
-      fn opts -> {:ok, opts} end,
-      fn _inputs, _opts ->
+    fn _inputs, _opts ->
         IO.puts("🍬 正在加糖...")
         {:ok, Param.new(:sweet_coffee, :string, "好喝的加糖咖啡")}
       end
-    }
   end
 
-  def to_guests(_opts) do
-    {
-      fn opts -> {:ok, opts} end,
-      fn _inputs, opts ->
-        guest_name = opts[:name] || "客人"
+  def to_guests(guest_name) do
+    fn _inputs, _opts ->
+        guest_name = guest_name || "客人"
         IO.puts("☕️ 递给 #{guest_name} 一杯咖啡，享受吧！")
         {:ok, Param.new(:served_coffee, :string, "递给 #{guest_name} 的咖啡")}
       end
-    }
   end
 end
 
@@ -83,7 +70,7 @@ steps = [
 
 for guest <- ["Alice", "Bob", "Peter"] do
   # 3. 执行 Recipe
-  {:ok, res} = steps
+  {:ok, res} = steps ++ [{MyKitchen.to_guests([guest]), :sweet_coffee, :served_coffee}]
   |> QyCore.Recipe.new(name: guest)
   |> QyCore.Executor.Serial.execute(initial_params)
   # 4. 输出结果

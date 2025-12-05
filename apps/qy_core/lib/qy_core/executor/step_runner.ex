@@ -6,7 +6,7 @@ defmodule QyCore.Executor.StepRunner do
   # TODO: 未来可考虑集成 Telemetry，简化 Hook 机制
   # TODO: 对于存在两步的 steps ，考虑将 prepare 与 run 分离调用
   alias QyCore.Param
-  import QyCore.Utilities, only: [ensure_full_step: 2, normalize_keys: 1]
+  import QyCore.Utilities, only: [ensure_full_step: 1, normalize_keys: 1]
 
   @spec run(
           QyCore.Recipe.Step.t(),
@@ -14,7 +14,7 @@ defmodule QyCore.Executor.StepRunner do
           nil | maybe_improper_list() | map()
         ) :: {:error, any()} | {:ok, [QyCore.Param.t()] | QyCore.Param.t()}
   def run(step, ctx_params, opts) do
-    {impl, in_keys, out_keys, step_opts, _meta} = ensure_full_step(step, opts)
+    {impl, in_keys, out_keys, step_opts, _meta} = ensure_full_step(step)
 
     telemetry_metadata = %{
       impl: impl,
@@ -122,26 +122,9 @@ defmodule QyCore.Executor.StepRunner do
 
   defp run_step(impl, inputs, opts) when is_atom(impl) do
     if Code.ensure_loaded?(impl) and function_exported?(impl, :run, 2) do
-      opts =
-        if function_exported?(impl, :prepare, 1) do
-           case impl.prepare(opts) do
-             {:ok, p_opts} -> p_opts
-             _ -> opts
-           end
-        else
-           opts
-        end
       impl.run(inputs, opts)
     else
       {:error, {:invalid_step_implementation, impl}}
-    end
-  end
-
-  defp run_step({prepare_fun, run_fun}, inputs, opts)
-       when is_function(prepare_fun, 1) and is_function(run_fun, 2) do
-    case prepare_fun.(opts) do
-      {:ok, prepared_opts} -> run_fun.(inputs, prepared_opts)
-      {:error, reason} -> {:error, reason}
     end
   end
 
