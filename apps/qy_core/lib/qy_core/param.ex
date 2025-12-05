@@ -54,6 +54,7 @@ defmodule QyCore.Param do
     end
   end
 
+  # TODO 确定进 Repo 的大小阈值（e.g. 长度超过一千或巴拉巴拉）
   def set_payload(%__MODULE__{} = param, new_payload) do
     %__MODULE__{param | payload: new_payload}
   end

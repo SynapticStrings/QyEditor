@@ -61,6 +61,19 @@ defmodule QyCore.Recipe.Step do
       @impl true
       def nested?(), do: false
 
+      @doc """
+      向 Executor 汇报状态，通过查找 opts 中的 :__reporter__ 闭包并调用它。
+      """
+      def report(opts, progress, payload \\ nil) do
+        case Keyword.get(opts, :__reporter__) do
+          reporter_fn when is_function(reporter_fn, 2) ->
+            reporter_fn.(progress, payload)
+
+          _ ->
+            :ok
+        end
+      end
+
       defoverridable prepare: 1,
                      nested?: 0
     end
