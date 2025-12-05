@@ -132,7 +132,9 @@ defmodule QyCoreTest do
     recipe = Recipe.new(steps)
 
     # 预期报错
-    assert {:error, {:missing_inputs, _index, [:tuned_vocal, :bgm]}} = Serial.execute(recipe, initial_params)
+    {:error, {:missing_inputs, idx, missing_values}} = Serial.execute(recipe, initial_params)
+    assert idx == 0
+    assert :bgm in missing_values
   end
 end
 

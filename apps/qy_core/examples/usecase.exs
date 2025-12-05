@@ -75,26 +75,6 @@ steps = [
   {MyKitchen.to_guests(["Alice", "Bob"]), :sweet_coffee, {:served_coffee_for_alice, :served_coffee_for_bob}}
 ]
 
-IO.puts("\n=== 1. 原始混乱的步骤列表 ===")
-Enum.each(steps, fn {_, in_k, out_k} ->
-  IO.inspect({in_k, "->", out_k}, label: "Step")
-end)
-
-# 3. 调用 Graph 进行拓扑排序 (见证奇迹的时刻)
-# 这里的 Graph.sort_steps 就是上一轮回复中提供的代码
-alias QyCore.Recipe.Graph
-
-case Graph.sort_steps(steps, Map.keys(initial_params)) do
-  {:ok, sorted_steps} ->
-    IO.puts("\n=== 2. 框架理顺后的执行顺序 ===")
-    Enum.each(sorted_steps, fn {_, in_k, out_k} ->
-      IO.inspect({in_k, "->", out_k}, label: "Run")
-    end)
-
-  {:error, reason} ->
-    IO.inspect(reason, label: "出错了")
-end
-
 context_init = QyCore.Executor.Context.new(steps, initial_params)
 |> IO.inspect(label: "Context New Example")
 

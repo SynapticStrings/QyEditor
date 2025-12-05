@@ -1,4 +1,4 @@
-defmodule QyCore.Step.NestedStep do
+defmodule QyCore.Recipe.NestedStep do
   @moduledoc """
   将一个完整的 Recipe 封装为一个独立的 Step。
   实现“流程中的流程”。

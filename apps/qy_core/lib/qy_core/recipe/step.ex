@@ -45,6 +45,7 @@ defmodule QyCore.Recipe.Step do
   end
 
   def extract_schema({impl, in_keys, out_keys}), do: {impl, in_keys, out_keys}
+  def extract_schema({impl, in_keys, out_keys, _opts}), do: {impl, in_keys, out_keys}
   def extract_schema({impl, in_keys, out_keys, _opts, _meta}), do: {impl, in_keys, out_keys}
 
   defmacro __using__(_opts) do

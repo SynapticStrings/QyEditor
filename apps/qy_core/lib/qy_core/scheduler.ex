@@ -6,9 +6,17 @@ defmodule QyCore.Scheduler do
   初始化执行上下文。
   """
   def build(%Recipe{} = recipe, initial_params) when is_list(initial_params) do
+    # 1. 稳健地构建 initial_map (防 Struct 匹配坑)
+    initial_map = Map.new(initial_params, fn param ->
+      # 兼容 Struct 或 Map，只要有 name 字段即可
+      {Map.get(param, :name), param}
+    end)
+
+    initial_keys = Map.keys(initial_map)
+
     # 预检步骤依赖关系是否有环或输入缺如
-    case Recipe.Graph.sort_steps(recipe.steps, initial_params) do
-      {:ok, _} -> do_build(recipe, initial_params)
+    case Recipe.Graph.validate(recipe.steps, initial_keys) do
+      :ok -> do_build(recipe, initial_params)
       {:error, reason} -> {:error, reason}
     end
   end
@@ -34,7 +42,7 @@ defmodule QyCore.Scheduler do
     # 遍历 pending，看谁的 needed 是 available 的子集
     Enum.filter(ctx.pending_steps, fn {step, _idx} ->
       {_impl, in_keys, _out} = Recipe.Step.extract_schema(step)
-      needed = normalize_keys(in_keys)
+      needed = normalize_keys_to_set(in_keys)
 
       MapSet.subset?(MapSet.new(needed), ctx.available_keys)
     end)
@@ -76,7 +84,8 @@ defmodule QyCore.Scheduler do
     |> Enum.reject(&is_nil/1)
 
   # 辅助：规范化 Key
-  defp normalize_keys(keys) when is_list(keys), do: keys
-  defp normalize_keys(keys) when is_tuple(keys), do: Tuple.to_list(keys)
-  defp normalize_keys(key), do: [key]
+  defp normalize_keys_to_set(nil), do: MapSet.new()
+  defp normalize_keys_to_set(atom) when is_atom(atom), do: MapSet.new([atom])
+  defp normalize_keys_to_set(list) when is_list(list), do: MapSet.new(list)
+  defp normalize_keys_to_set(tuple) when is_tuple(tuple), do: MapSet.new(Tuple.to_list(tuple))
 end

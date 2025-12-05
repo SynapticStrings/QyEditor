@@ -14,6 +14,7 @@ defmodule QyCore.Recipe do
   defstruct steps: [], name: nil, opts: []
 
   def new(steps, opts \\ []) do
+    # TODO: 这里可以做更多的验证和预处理
     %__MODULE__{
       steps: steps,
       name: Keyword.get(opts, :name),
