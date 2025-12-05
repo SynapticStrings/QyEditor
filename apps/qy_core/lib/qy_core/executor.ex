@@ -15,12 +15,15 @@ defmodule QyCore.Executor.Serial do
   end
 
   defp loop(ctx) do
+    Scheduler.next_ready_steps(ctx)
+
     case Scheduler.next_ready_steps(ctx) do
       [] ->
-        if Scheduler.done?(ctx),
-          do: {:ok, Scheduler.get_results(ctx)},
-          else:
-            IO.inspect(ctx, label: "StuckContext"); {:error, :stuck}
+        if Scheduler.done?(ctx) do
+          {:ok, Scheduler.get_results(ctx)}
+        else
+          {:error, :stuck}
+        end
 
       # 串行只取第一个
       [{step, idx} | _] ->
@@ -69,7 +72,7 @@ defmodule QyCore.Executor.Serial do
 
   defp prepare_inputs(key, params), do: Map.fetch!(params, key)
 
-  defp run_step(impl, inputs, opts) do
+  defp run_step(impl, inputs, opts) when is_atom(impl) do
     # 处理模块实现或函数实现
     if Code.ensure_loaded?(impl) and function_exported?(impl, :run, 2) do
       impl.run(inputs, opts)
@@ -78,6 +81,20 @@ defmodule QyCore.Executor.Serial do
       {:error, {:invalid_step_implementation, impl}}
     end
   end
+
+  defp run_step({prepare_fun, run_fun}, inputs, opts)
+       when is_function(prepare_fun, 1) and is_function(run_fun, 2) do
+    case prepare_fun.(opts) do
+      {:ok, prepared_opts} -> run_fun.(inputs, prepared_opts)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp run_step(run_fun, inputs, opts) when is_function(run_fun, 2) do
+    run_fun.(inputs, opts)
+  end
+
+  defp run_step(_, _, _), do: {:error, :invalid_step_implementation}
 
   defp ensure_full_step({impl, in_k, out_k}), do: {impl, in_k, out_k, [], []}
   defp ensure_full_step({impl, in_k, out_k, opts}), do: {impl, in_k, out_k, opts, []}

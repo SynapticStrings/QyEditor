@@ -7,23 +7,22 @@ defmodule QyCore.Scheduler do
   """
   def build(%Recipe{} = recipe, initial_params) when is_list(initial_params) do
     # 1. 稳健地构建 initial_map (防 Struct 匹配坑)
-    initial_map = Map.new(initial_params, fn param ->
-      # 兼容 Struct 或 Map，只要有 name 字段即可
-      {Map.get(param, :name), param}
-    end)
+    initial_map =
+      Map.new(initial_params, fn param ->
+        # 兼容 Struct 或 Map，只要有 name 字段即可
+        {Map.get(param, :name), param}
+      end)
 
     initial_keys = Map.keys(initial_map)
 
     # 预检步骤依赖关系是否有环或输入缺如
     case Recipe.Graph.validate(recipe.steps, initial_keys) do
-      :ok -> do_build(recipe, initial_params)
+      :ok -> do_build(recipe, initial_map)
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp do_build(recipe, initial_params) do
-    initial_map = Map.new(initial_params, fn %Param{name: n} = p -> {n, p} end)
-
+  defp do_build(recipe, initial_map) do
     context = %Context{
       pending_steps: Enum.with_index(recipe.steps),
       running_steps: MapSet.new(),
@@ -41,10 +40,11 @@ defmodule QyCore.Scheduler do
   def next_ready_steps(%Context{} = ctx) do
     # 遍历 pending，看谁的 needed 是 available 的子集
     Enum.filter(ctx.pending_steps, fn {step, _idx} ->
-      {_impl, in_keys, _out} = Recipe.Step.extract_schema(step)
-      needed = normalize_keys_to_set(in_keys)
+      {_impl, in_keys, _out} = extract_step_schema(step)
 
-      MapSet.subset?(MapSet.new(needed), ctx.available_keys)
+      # needed = normalize_keys_to_set(in_keys)
+
+      MapSet.subset?(normalize_keys_to_set(in_keys), ctx.available_keys)
     end)
   end
 
@@ -56,22 +56,27 @@ defmodule QyCore.Scheduler do
     new_pending = Enum.reject(ctx.pending_steps, fn {_, idx} -> idx == step_idx end)
 
     # 2. 合并数据
-    new_params_map = case output_params do
-      p = %Param{} -> %{p.name => p}
-      [_ | _] ->
-        Map.new(output_params, fn %Param{name: n} = p -> {n, p} end)
-    end
+    new_params_map =
+      case output_params do
+        p = %Param{} ->
+          %{p.name => p}
+
+        [_ | _] ->
+          Map.new(output_params, fn %Param{name: n} = p -> {n, p} end)
+      end
+
     merged_params = Map.merge(ctx.params, new_params_map)
 
     # 3. 更新 available_keys
     new_keys = Map.keys(new_params_map)
     updated_keys = MapSet.union(ctx.available_keys, MapSet.new(new_keys))
 
-    %{ctx |
-      pending_steps: new_pending,
-      params: merged_params,
-      available_keys: updated_keys,
-      history: ctx.history ++ [step_idx]
+    %{
+      ctx
+      | pending_steps: new_pending,
+        params: merged_params,
+        available_keys: updated_keys,
+        history: ctx.history ++ [step_idx]
     }
   end
 
@@ -79,13 +84,24 @@ defmodule QyCore.Scheduler do
   def done?(%Context{}), do: false
 
   def get_results(%Context{params: params}), do: params
-  def get_results(%Context{params: params}, key), do:
-    Enum.map(params, fn {k, v} -> if k == key, do: v, else: nil end)
-    |> Enum.reject(&is_nil/1)
+
+  def get_results(%Context{params: params}, key),
+    do:
+      Enum.map(params, fn {k, v} -> if k == key, do: v, else: nil end)
+      |> Enum.reject(&is_nil/1)
+
+  defp extract_step_schema(step) do
+    case step do
+      {impl, in_k, out_k} -> {impl, in_k, out_k}
+      {impl, in_k, out_k, _opts} -> {impl, in_k, out_k}
+      other -> QyCore.Recipe.Step.extract_schema(other)
+    end
+  end
 
   # 辅助：规范化 Key
   defp normalize_keys_to_set(nil), do: MapSet.new()
   defp normalize_keys_to_set(atom) when is_atom(atom), do: MapSet.new([atom])
   defp normalize_keys_to_set(list) when is_list(list), do: MapSet.new(list)
   defp normalize_keys_to_set(tuple) when is_tuple(tuple), do: MapSet.new(Tuple.to_list(tuple))
+  defp normalize_keys_to_set(mapset), do: mapset
 end

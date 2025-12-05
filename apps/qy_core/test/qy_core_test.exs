@@ -37,7 +37,7 @@ defmodule QySynth.Steps.Mix do
 end
 
 alias QyCore.{Param, Recipe}
-alias QySynth.Steps.{Denoise, PitchFix}
+alias QySynth.Steps.{Denoise, PitchFix, Mix}
 
 vocal_chain_steps = [
   {Denoise, :raw_audio, :clean_audio},
