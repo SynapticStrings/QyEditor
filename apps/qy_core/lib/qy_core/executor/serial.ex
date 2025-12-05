@@ -5,8 +5,7 @@ defmodule QyCore.Executor.Serial do
   默认的执行器即为串行执行器。
   """
   @behaviour QyCore.Executor
-  alias QyCore.{Scheduler, Param}
-  import QyCore.Utilities, only: [ensure_full_step: 1, normalize_keys: 1]
+  alias QyCore.Scheduler
 
   @impl true
   def execute(recipe, initial_params, _opts \\ []) do
@@ -29,38 +28,13 @@ defmodule QyCore.Executor.Serial do
 
       # 串行只取第一个
       [{step, idx} | _] ->
-        {_impl, _in_keys, out_keys, _step_opts, _meta} = ensure_full_step(step)
-
-        # 执行 (这里假设 impl 是一个实现了 QyCore.Recipe.Step 的模块)
         case QyCore.Executor.StepRunner.run(step, ctx.params, opts) do
-          {:ok, raw_output} ->
-            renamed_output = align_output_names(raw_output, out_keys)
-
+          {:ok, renamed_output} ->
             loop(Scheduler.merge_result(ctx, idx, renamed_output))
 
           error ->
             error
         end
     end
-  end
-
-  defp align_output_names(%Param{} = param, out_key) when is_atom(out_key) do
-    %{param | name: out_key}
-  end
-
-  # 情况 2: 列表输出，out_keys 是列表/元组
-  defp align_output_names(params, out_keys) when is_list(params) do
-    keys = normalize_keys(out_keys)
-
-    # 严格按顺序重命名
-    # 如果数量不一致这里会报错，这正好起到了校验作用
-    Enum.zip_with(params, keys, fn param, key ->
-      %{param | name: key}
-    end)
-  end
-
-  # 容错：如果 Step 返回了单个 Param 但 Recipe 定义了单元素列表 [:name]
-  defp align_output_names(%Param{} = param, [out_key]) do
-    [%{param | name: out_key}]
   end
 end
