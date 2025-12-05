@@ -29,7 +29,7 @@ defmodule QyCore.Executor.Serial do
 
       # 串行只取第一个
       [{step, idx} | _] ->
-        case QyCore.Executor.StepRunner.run(step, ctx.params, opts) do
+        case QyCore.Runner.run(step, ctx.params, opts) do
           {:ok, renamed_output} ->
             loop(Scheduler.merge_result(ctx, idx, renamed_output), opts)
 
