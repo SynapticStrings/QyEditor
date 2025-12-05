@@ -16,10 +16,9 @@ defmodule QyCore.Runner do
       in_keys: in_keys,
       out_keys: out_keys,
       step_default_opts: step_opts,
+      inputs: prepare_inputs(in_keys, ctx_params),
 
-      raw_params: ctx_params, # 全部数据池
-      inputs: nil,            # 待填充
-      opts: opts,             # 外部注入的 opts (resources 等)
+      opts: opts,
 
       telemetry_meta: %{impl: impl, in_keys: in_keys, out_keys: out_keys}
     }
@@ -36,4 +35,8 @@ defmodule QyCore.Runner do
     next_fn = fn next_ctx -> run_pipeline(rest, next_ctx) end
     plug.call(ctx, next_fn)
   end
+
+  defp prepare_inputs(keys, params) when is_list(keys), do: Enum.map(keys, &Map.fetch!(params, &1))
+  defp prepare_inputs(keys, params) when is_tuple(keys), do: Enum.map(Tuple.to_list(keys), &Map.fetch!(params, &1))
+  defp prepare_inputs(key, params), do: Map.fetch!(params, key)
 end
