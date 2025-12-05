@@ -13,8 +13,9 @@ defmodule QyCore.Recipe.Step do
   function()
   | nil
 
-  @type input_keys :: tuple() | atom()
-  @type output_keys :: tuple() | atom()
+  @type io_key :: atom() | [atom()] | tuple() | MapSet.t()
+  @type input_keys :: io_key()
+  @type output_keys :: io_key()
   @type input :: tuple() | Param.t()
   @type output :: tuple() | Param.t()
 
