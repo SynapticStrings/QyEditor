@@ -38,13 +38,11 @@ defmodule QyCore.Recipe.Graph do
 
     case ready do
       [] ->
-        # 死锁分析
         first_stuck = hd(pending)
         missing = MapSet.difference(first_stuck.needed, available) |> MapSet.to_list()
         {:error, {:missing_inputs, first_stuck.index, missing}}
 
       _ ->
-        # 模拟执行，收集产出
         newly_produced =
           ready
           |> Enum.map(& &1.provides)
@@ -55,7 +53,6 @@ defmodule QyCore.Recipe.Graph do
     end
   end
 
-  # --- 辅助：强力规范化 ---
   defp normalize_to_set(nil), do: MapSet.new()
   defp normalize_to_set(atom) when is_atom(atom), do: MapSet.new([atom])
   defp normalize_to_set(list) when is_list(list), do: MapSet.new(list)

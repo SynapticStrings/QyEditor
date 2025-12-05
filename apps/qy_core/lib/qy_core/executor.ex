@@ -73,9 +73,19 @@ defmodule QyCore.Executor.Serial do
   defp prepare_inputs(key, params), do: Map.fetch!(params, key)
 
   defp run_step(impl, inputs, opts) when is_atom(impl) do
-    # 处理模块实现或函数实现
     if Code.ensure_loaded?(impl) and function_exported?(impl, :run, 2) do
-      impl.run(inputs, opts)
+      if function_exported?(impl, :prepare, 1) do
+        with {:ok, prepared_opts} <- impl.prepare(opts),
+           {:ok, result} <- impl.run(inputs, prepared_opts) do
+
+           {:ok, result}
+        else
+          {:error, reason} -> {:error, reason}
+        end
+      else
+        impl.run(inputs, opts)
+      end
+
     else
       # 简单的容错，防止 impl 不是模块的情况（虽然 schema 校验过）
       {:error, {:invalid_step_implementation, impl}}

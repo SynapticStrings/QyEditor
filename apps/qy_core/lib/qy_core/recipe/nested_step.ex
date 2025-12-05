@@ -1,9 +1,22 @@
 defmodule QyCore.Recipe.NestedStep do
   @moduledoc """
-  将一个完整的 Recipe 封装为一个独立的 Step。
-  实现“流程中的流程”。
+  将一个完整的 Recipe 封装为一个独立的 Step 以实现嵌套操作。
   """
   use QyCore.Recipe.Step
+
+  def prepare(opts) do
+    inner_recipe = Keyword.fetch!(opts, :recipe)
+    executor = Keyword.get(opts, :executor, QyCore.Executor.Serial)
+    input_map = Keyword.get(opts, :input_map, %{})
+    output_map = Keyword.get(opts, :output_map, %{})
+
+    {:ok, [
+      recipe: inner_recipe,
+      executor: executor,
+      input_map: input_map,
+      output_map: output_map
+    ]}
+  end
 
   @doc """
   运行子流程。
@@ -15,12 +28,12 @@ defmodule QyCore.Recipe.NestedStep do
   - :input_map (可选) -> %{parent_name => child_name} 参数名映射
   - :output_map (可选) -> %{child_name => parent_name} 结果名映射
   """
-  def run(input_params, opts) do
-    inner_recipe = Keyword.fetch!(opts, :recipe)
-    executor = Keyword.get(opts, :executor, QyCore.Executor.Serial)
-    input_map = Keyword.get(opts, :input_map, %{})
-    output_map = Keyword.get(opts, :output_map, %{})
-
+  def run(input_params, [
+        recipe: inner_recipe,
+        executor: executor,
+        input_map: input_map,
+        output_map: output_map
+      ]) do
     # 1. 准备输入 (Input Adapter)
     # 将父层传进来的 Params 重命名为子层需要的名字
     child_initial_params =
@@ -52,11 +65,11 @@ defmodule QyCore.Recipe.NestedStep do
               end
             end)
           else
-             # 如果没定义映射，为了安全，我们应该只返回在 Step 定义中声明过的 output_keys
-             # 但 Step.run 无法直接知道自己的 output_keys 定义。
-             # 所以这里我们简单地返回所有子结果（除了改名的），
-             # 父级 Executor 会根据 Step 定义自动丢弃不需要的。
-             Map.values(inner_results)
+            # 如果没定义映射，为了安全，我们应该只返回在 Step 定义中声明过的 output_keys
+            # 但 Step.run 无法直接知道自己的 output_keys 定义。
+            # 所以这里我们简单地返回所有子结果（除了改名的），
+            # 父级 Executor 会根据 Step 定义自动丢弃不需要的。
+            Map.values(inner_results)
           end
 
         {:ok, final_outputs}
