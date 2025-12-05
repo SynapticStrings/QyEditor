@@ -8,6 +8,8 @@ defmodule QyCore.Executor.Serial do
   alias QyCore.Scheduler
 
   @impl true
+  @spec execute(QyCore.Recipe.t(), [QyCore.Param.t()]) ::
+          {:error, any()} | {:ok, [QyCore.Param.t()]}
   def execute(recipe, initial_params, _opts \\ []) do
     case Scheduler.build(recipe, initial_params) do
       # TODO: 将来确定相关关系后 merge 下
@@ -17,8 +19,6 @@ defmodule QyCore.Executor.Serial do
   end
 
   defp loop(ctx, opts) do
-    Scheduler.next_ready_steps(ctx)
-
     case Scheduler.next_ready_steps(ctx) do
       [] ->
         if Scheduler.done?(ctx) do

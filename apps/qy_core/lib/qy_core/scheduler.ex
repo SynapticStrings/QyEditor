@@ -48,6 +48,7 @@ defmodule QyCore.Scheduler do
   @doc """
   核心调度函数：找出所有“原料已就绪”且“未执行”的步骤。
   """
+  @spec next_ready_steps(QyCore.Scheduler.Context.t()) :: [{Recipe.Step.t(), non_neg_integer()}]
   def next_ready_steps(%Context{} = ctx) do
     # 遍历 pending，看谁的 needed 是 available 的子集
     Enum.filter(ctx.pending_steps, fn {step, _idx} ->
@@ -62,6 +63,11 @@ defmodule QyCore.Scheduler do
   @doc """
   状态更新：当 Step 执行完后，将结果合并回 Context。
   """
+  @spec merge_result(
+          Context.t(),
+          non_neg_integer(),
+          [Param.t()] | Param.t()
+        ) :: Context.t()
   def merge_result(%Context{} = ctx, step_idx, output_params) do
     # 1. 移除 pending
     new_pending = Enum.reject(ctx.pending_steps, fn {_, idx} -> idx == step_idx end)
@@ -91,11 +97,14 @@ defmodule QyCore.Scheduler do
     }
   end
 
+  @spec done?(Context.t()) :: boolean()
   def done?(%Context{pending_steps: []}), do: true
   def done?(%Context{}), do: false
 
+  @spec get_results(Context.t()) :: [Param.t()]
   def get_results(%Context{params: params}), do: params
 
+  @spec get_results(Context.t(), atom()) :: [Param.t()]
   def get_results(%Context{params: params}, key),
     do:
       Enum.map(params, fn {k, v} -> if k == key, do: v, else: nil end)

@@ -28,6 +28,7 @@ defmodule QyCore.Param do
 
   ## 函数
 
+  @spec new(name(), param_type(), payload(), %{}) :: QyCore.Param.t()
   def new(name, type, payload \\ nil, metadata \\ %{}) do
     %__MODULE__{
       name: name,
@@ -37,24 +38,14 @@ defmodule QyCore.Param do
     }
   end
 
+  @spec get_payload(QyCore.Param.t()) :: raw_payload
   def get_payload(%__MODULE__{payload: payload}) when is_list(payload), do: payload
   def get_payload(%__MODULE__{payload: {:ref, repo, id}}) do
-    case repo do
-      mod when is_atom(mod) ->
-        mod.get_param_payload(id)
-
-      # pid when is_pid(pid) ->
-      #   send(pid, {:get_param_payload, self(), id})
-
-      #   receive do
-      #     {:param_payload, ^id, payload} -> payload
-      #   after
-      #     5_000 -> raise "Timeout while getting param payload for id #{inspect(id)}"
-      #   end
-    end
+    repo.get_param_payload(id)
   end
 
   # TODO 确定进 Repo 的大小阈值（e.g. 长度超过一千或巴拉巴拉）
+  @spec set_payload(QyCore.Param.t(), payload()) :: QyCore.Param.t()
   def set_payload(%__MODULE__{} = param, new_payload) do
     %__MODULE__{param | payload: new_payload}
   end

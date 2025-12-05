@@ -13,6 +13,7 @@ defmodule QyCore.Recipe do
         }
   defstruct steps: [], name: nil, opts: []
 
+  @spec new([Step.t()], keyword()) :: t()
   def new(steps, opts \\ []) do
     # TODO: 这里可以做更多的验证和预处理
     %__MODULE__{
@@ -24,19 +25,20 @@ defmodule QyCore.Recipe do
 
   @doc """
   全局注入选项 (支持深度注入)。
+
+  ### selector 的选项
+
+  * 模块或函数本体 => 匹配就可以
+  * 检查函数 => 输入 step ，自定义具体逻辑
   """
+  @spec assign_options(
+          QyCore.Recipe.t(),
+          Step.implementation() | (Step.t() -> boolean()),
+          keyword() | %{}
+        ) :: QyCore.Recipe.t()
   def assign_options(%__MODULE__{} = recipe, selector, new_opts) do
     walk(recipe, fn step ->
-      {impl, _in_k, _out_k, _current_opts} = ensure_full_step(step)
-
-      # 判断是否匹配
-      match? = case selector do
-        :all -> true
-        ^impl -> true # 匹配模块
-        _ -> false
-      end
-
-      if match? do
+      if do_match(step, selector) do
         Step.inject_options(ensure_full_step(step), new_opts)
       else
         step
@@ -49,12 +51,14 @@ defmodule QyCore.Recipe do
   func 会被应用到树中的每一个 Step 上。
   如果 Step 是嵌套的 (NestedStep)，会自动递归进入其内部的 recipe。
   """
+  @spec walk(QyCore.Recipe.t(), (Step.t() -> boolean())) :: QyCore.Recipe.t()
   def walk(%__MODULE__{steps: steps} = recipe, func) when is_function(func, 1) do
-    new_steps = Enum.map(steps, fn step ->
-      modified_step = func.(step)
+    new_steps =
+      Enum.map(steps, fn step ->
+        modified_step = func.(step)
 
-      process_nested(modified_step, func)
-    end)
+        process_nested(modified_step, func)
+      end)
 
     %{recipe | steps: new_steps}
   end
@@ -76,5 +80,20 @@ defmodule QyCore.Recipe do
     else
       step
     end
+  end
+
+  defp do_match(step, selector) when is_atom(selector) or is_function(selector, 2) do
+    {impl, _in_k, _out_k, _current_opts} = ensure_full_step(step)
+
+    case selector do
+      :all -> true
+      # 匹配模块
+      ^impl -> true
+      _ -> false
+    end
+  end
+
+  defp do_match(step, selector) when is_function(selector, 1) do
+    selector.(step)
   end
 end

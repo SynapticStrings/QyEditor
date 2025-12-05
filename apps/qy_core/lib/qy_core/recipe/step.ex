@@ -18,11 +18,10 @@ defmodule QyCore.Recipe.Step do
   @type io_key :: atom() | [atom()] | tuple() | MapSet.t()
   @type input_keys :: io_key()
   @type output_keys :: io_key()
-  @type input :: tuple() | Param.t()
-  @type output :: tuple() | Param.t()
+  @type input :: tuple() | Param.t() | [Param.t()]
+  @type output :: tuple() | Param.t() | [Param.t()]
 
   @type step_options :: keyword()
-  @type running_options :: {:running, term()}
 
   @type step_schema :: {implementation(), input_keys(), output_keys()}
   @type step_with_options :: {
@@ -56,6 +55,7 @@ defmodule QyCore.Recipe.Step do
   defmacro __using__(_opts) do
     quote do
       @behaviour QyCore.Recipe.Step
+      alias QyCore.Recipe.Step
 
       @impl true
       def nested?(), do: false
