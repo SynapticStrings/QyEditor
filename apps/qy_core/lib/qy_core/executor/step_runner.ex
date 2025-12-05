@@ -4,6 +4,7 @@ defmodule QyCore.Executor.StepRunner do
   封装了：输入准备、Hook 触发、Reporter 注入、输出重命名。
   """
   alias QyCore.Param
+  import QyCore.Utilities, only: [ensure_full_step: 1, normalize_keys: 1]
 
   # 定义 Hook 规范 (使用标准 Telemetry 后可简化，这里先保留回调模式演示逻辑)
   def run(step, ctx_params, opts) do
@@ -121,12 +122,4 @@ defmodule QyCore.Executor.StepRunner do
   end
 
   defp run_step(_, _, _), do: {:error, :invalid_step_implementation}
-
-  defp ensure_full_step({impl, in_k, out_k}), do: {impl, in_k, out_k, [], []}
-  defp ensure_full_step({impl, in_k, out_k, opts}), do: {impl, in_k, out_k, opts, []}
-  defp ensure_full_step({impl, in_k, out_k, opts, meta}), do: {impl, in_k, out_k, opts, meta}
-
-  defp normalize_keys(k) when is_list(k), do: k
-  defp normalize_keys(k) when is_tuple(k), do: Tuple.to_list(k)
-  defp normalize_keys(k), do: [k]
 end

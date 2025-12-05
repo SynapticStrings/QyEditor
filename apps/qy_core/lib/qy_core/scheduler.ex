@@ -1,6 +1,7 @@
 defmodule QyCore.Scheduler do
   alias QyCore.Scheduler.Context
   alias QyCore.{Recipe, Param}
+  import QyCore.Utilities, only: [normalize_keys_to_set: 1]
 
   @doc """
   初始化执行上下文。
@@ -45,9 +46,9 @@ defmodule QyCore.Scheduler do
     Enum.filter(ctx.pending_steps, fn {step, _idx} ->
       {_impl, in_keys, _out} = extract_step_schema(step)
 
-      # needed = normalize_keys_to_set(in_keys)
+      needed = normalize_keys_to_set(in_keys)
 
-      MapSet.subset?(normalize_keys_to_set(in_keys), ctx.available_keys)
+      MapSet.subset?(needed, ctx.available_keys)
     end)
   end
 
@@ -100,11 +101,4 @@ defmodule QyCore.Scheduler do
       other -> QyCore.Recipe.Step.extract_schema(other)
     end
   end
-
-  # 辅助：规范化 Key
-  defp normalize_keys_to_set(nil), do: MapSet.new()
-  defp normalize_keys_to_set(atom) when is_atom(atom), do: MapSet.new([atom])
-  defp normalize_keys_to_set(list) when is_list(list), do: MapSet.new(list)
-  defp normalize_keys_to_set(tuple) when is_tuple(tuple), do: MapSet.new(Tuple.to_list(tuple))
-  defp normalize_keys_to_set(mapset), do: mapset
 end

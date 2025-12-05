@@ -1,8 +1,14 @@
-
 defmodule QyCore.Executor.Serial do
+  @moduledoc """
+  串行执行器，实现 `QyCore.Executor` 行为。
+  它按顺序执行 Recipe 中的步骤，每次只执行一个步骤，等待其完成后再执行下一个步骤。
+  默认的执行器即为串行执行器。
+  """
   @behaviour QyCore.Executor
   alias QyCore.{Scheduler, Param}
+  import QyCore.Utilities, only: [ensure_full_step: 1, normalize_keys: 1]
 
+  @impl true
   def execute(recipe, initial_params, _opts \\ []) do
     case Scheduler.build(recipe, initial_params) do
       {:ok, ctx} -> loop(ctx)
@@ -57,12 +63,4 @@ defmodule QyCore.Executor.Serial do
   defp align_output_names(%Param{} = param, [out_key]) do
     [%{param | name: out_key}]
   end
-
-  defp ensure_full_step({impl, in_k, out_k}), do: {impl, in_k, out_k, [], []}
-  defp ensure_full_step({impl, in_k, out_k, opts}), do: {impl, in_k, out_k, opts, []}
-  defp ensure_full_step({impl, in_k, out_k, opts, meta}), do: {impl, in_k, out_k, opts, meta}
-
-  defp normalize_keys(k) when is_list(k), do: k
-  defp normalize_keys(k) when is_tuple(k), do: Tuple.to_list(k)
-  defp normalize_keys(k), do: [k]
 end

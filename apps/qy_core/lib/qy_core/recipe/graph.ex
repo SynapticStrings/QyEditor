@@ -4,6 +4,7 @@ defmodule QyCore.Recipe.Graph do
   """
 
   alias QyCore.Recipe.Step
+  import QyCore.Utilities, only: [normalize_keys_to_set: 1]
 
   def validate(steps, initial_keys) do
     # 确保 initial_keys 是 MapSet
@@ -18,8 +19,8 @@ defmodule QyCore.Recipe.Graph do
         %{
           index: idx,
           step: step,
-          needed: normalize_to_set(in_k),
-          provides: normalize_to_set(out_k)
+          needed: normalize_keys_to_set(in_k),
+          provides: normalize_keys_to_set(out_k)
         }
       end)
 
@@ -52,9 +53,4 @@ defmodule QyCore.Recipe.Graph do
         simulate_run(not_ready, new_available)
     end
   end
-
-  defp normalize_to_set(nil), do: MapSet.new()
-  defp normalize_to_set(atom) when is_atom(atom), do: MapSet.new([atom])
-  defp normalize_to_set(list) when is_list(list), do: MapSet.new(list)
-  defp normalize_to_set(tuple) when is_tuple(tuple), do: MapSet.new(Tuple.to_list(tuple))
 end

@@ -4,6 +4,7 @@ defmodule QyCore.Recipe do
   """
 
   alias QyCore.Recipe.Step
+  import QyCore.Utilities, only: [ensure_full_step: 1]
 
   @type t :: %__MODULE__{
           steps: [Step.t()],
@@ -26,7 +27,7 @@ defmodule QyCore.Recipe do
   """
   def assign_options(%__MODULE__{} = recipe, selector, new_opts) do
     walk(recipe, fn step ->
-      {impl, in_k, out_k, current_opts, meta} = normalize_step(step)
+      {impl, in_k, out_k, current_opts, meta} = ensure_full_step(step)
 
       # 判断是否匹配
       match? = case selector do
@@ -61,7 +62,7 @@ defmodule QyCore.Recipe do
   end
 
   defp process_nested(step, func) do
-    {impl, in_k, out_k, opts, meta} = normalize_step(step)
+    {impl, in_k, out_k, opts, meta} = ensure_full_step(step)
 
     if is_atom(impl) and function_exported?(impl, :nested?, 0) and impl.nested?() do
       case Keyword.get(opts, :recipe) do
@@ -78,8 +79,4 @@ defmodule QyCore.Recipe do
       step
     end
   end
-
-  defp normalize_step({impl, in_k, out_k}), do: {impl, in_k, out_k, [], []}
-  defp normalize_step({impl, in_k, out_k, opts}), do: {impl, in_k, out_k, opts, []}
-  defp normalize_step({impl, in_k, out_k, opts, meta}), do: {impl, in_k, out_k, opts, meta}
 end
