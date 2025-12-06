@@ -22,12 +22,12 @@ defmodule QyCore.Runner do
       assigns: %{}
     }
 
-    middleware_stack =
+    hook_stack =
       [QyCore.Runner.Telemetry] ++
-        Keyword.get(step_opts, :extra_middleware_stack, []) ++
+        Keyword.get(step_opts, :extra_hook_stack, []) ++
         [QyCore.Runner.Core]
 
-    run_pipeline(middleware_stack, initial_ctx)
+    run_pipeline(hook_stack, initial_ctx)
   end
 
   # 递归执行管道
