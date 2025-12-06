@@ -24,10 +24,10 @@ defmodule QyCore.Runner.Core do
         renamed = align_output_names(raw_output, ctx.out_keys)
         {:ok, renamed}
 
-      other -> other
+      other ->
+        other
     end
   end
-
 
   defp align_output_names(%Param{} = param, out_key) when is_atom(out_key) do
     %{param | name: out_key}

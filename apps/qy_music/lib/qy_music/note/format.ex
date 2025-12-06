@@ -2,7 +2,7 @@ defmodule QyMusic.Note.Format do
   alias QyMusic.Note
 
   # TODO 实现完全 :perference 是 :ss/:ff 的情况
-  def format({_, var, _} = note, opts  \\ []) do
+  def format({_, var, _} = note, opts \\ []) do
     prefer =
       opts
       |> Keyword.get(:preference, :natural)
@@ -13,7 +13,8 @@ defmodule QyMusic.Note.Format do
       :natural -> do_format(note, :natural)
       :flat -> do_format(note, :flat)
       :ff -> do_format(note, :flat)
-    end |> do_format(prefer)
+    end
+    |> do_format(prefer)
   end
 
   @valid_key [:a, :b, :c, :d, :e, :f, :g]

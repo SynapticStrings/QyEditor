@@ -22,26 +22,35 @@ defmodule QyCore.Runner.Telemetry do
       e ->
         stack = __STACKTRACE__
         duration = System.monotonic_time() - start_time
+
         :telemetry.execute(
           [:qy_core, :step, :exception],
           %{duration: duration},
           Map.merge(meta, %{kind: :error, reason: e, stacktrace: stack})
         )
+
         {:error, e}
     catch
       kind, reason ->
         duration = System.monotonic_time() - start_time
+
         :telemetry.execute(
           [:qy_core, :step, :exception],
           %{duration: duration},
           Map.merge(meta, %{kind: kind, reason: reason})
         )
+
         {:error, {kind, reason}}
     end
   end
 
   defp report_error(start_time, meta, reason) do
     duration = System.monotonic_time() - start_time
-    :telemetry.execute([:qy_core, :step, :exception], %{duration: duration}, Map.put(meta, :reason, reason))
+
+    :telemetry.execute(
+      [:qy_core, :step, :exception],
+      %{duration: duration},
+      Map.put(meta, :reason, reason)
+    )
   end
 end

@@ -152,8 +152,7 @@ defmodule QyMusic.Note do
 
   @spec same?(note_1 :: note(), note_2 :: note()) :: boolean()
   def same?(note_1, note_2),
-    do:
-      format(note_1, preference: :sharp) == format(note_2, preference: :sharp)
+    do: format(note_1, preference: :sharp) == format(note_2, preference: :sharp)
 
   # 将音符转变为对应的频率
   @spec do_convert_note(note :: note(), format :: tuning_format(), base_note :: note_and_frq()) ::

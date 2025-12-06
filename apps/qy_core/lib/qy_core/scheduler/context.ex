@@ -11,10 +11,15 @@ defmodule QyCore.Scheduler.Context do
         }
   defstruct [
     ## 调度
-    :pending_steps,       # 还未执行的步骤列表 [{step, idx}]
-    :available_keys,      # 当前已有的数据 keys (MapSet<Atom>)
-    :params,              # 实际数据 (Map<Name, Param>)
-    :running_steps,       # 正在运行中的 steps (用于并行控制)
-    :history              # 执行历史 [{step_idx, output_params}]
+    # 还未执行的步骤列表 [{step, idx}]
+    :pending_steps,
+    # 当前已有的数据 keys (MapSet<Atom>)
+    :available_keys,
+    # 实际数据 (Map<Name, Param>)
+    :params,
+    # 正在运行中的 steps (用于并行控制)
+    :running_steps,
+    # 执行历史 [{step_idx, output_params}]
+    :history
   ]
 end

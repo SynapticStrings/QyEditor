@@ -48,7 +48,7 @@ defmodule QyCore.Recipe.Step do
   ## public API
 
   def inject_options({impl, in_keys, out_keys, opts}, new_opts) when is_map(new_opts) do
-    merged_opts = Enum.map(new_opts, &(&1)) ++ opts
+    merged_opts = new_opts |> Enum.map(& &1) |> Keyword.merge(opts)
     {impl, in_keys, out_keys, merged_opts}
   end
 

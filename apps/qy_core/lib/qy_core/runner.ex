@@ -13,11 +13,9 @@ defmodule QyCore.Runner do
       step_implementation: impl,
       in_keys: in_keys,
       out_keys: out_keys,
-
       step_default_opts: step_opts,
       inputs: prepare_inputs(in_keys, ctx_params),
       recipe_opts: recipe_opts,
-
       telemetry_meta: %{impl: impl, in_keys: in_keys, out_keys: out_keys},
 
       # 参照了 LiveView.Socket ，后面忘了
@@ -25,9 +23,9 @@ defmodule QyCore.Runner do
     }
 
     middleware_stack =
-      [QyCore.Runner.Telemetry]
-      ++ Keyword.get(step_opts, :extra_middleware_stack, [])
-      ++ [QyCore.Runner.Core]
+      [QyCore.Runner.Telemetry] ++
+        Keyword.get(step_opts, :extra_middleware_stack, []) ++
+        [QyCore.Runner.Core]
 
     run_pipeline(middleware_stack, initial_ctx)
   end
@@ -41,8 +39,12 @@ defmodule QyCore.Runner do
     plug.call(ctx, next_fn)
   end
 
-  defp prepare_inputs(keys, params) when is_list(keys), do: Enum.map(keys, &Map.fetch!(params, &1))
-  defp prepare_inputs(keys, params) when is_tuple(keys), do: Enum.map(Tuple.to_list(keys), &Map.fetch!(params, &1))
+  defp prepare_inputs(keys, params) when is_list(keys),
+    do: Enum.map(keys, &Map.fetch!(params, &1))
+
+  defp prepare_inputs(keys, params) when is_tuple(keys),
+    do: Enum.map(Tuple.to_list(keys), &Map.fetch!(params, &1))
+
   # Let it crash.
   defp prepare_inputs(key, params) when is_map(params), do: Map.fetch!(params, key)
 end

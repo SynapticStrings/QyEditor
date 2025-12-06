@@ -61,7 +61,6 @@ main_steps = [
       output_map: %{tuned_audio: :ready_vocal}
     ]
   },
-
   {Mix, [:ready_vocal, :bgm], :final_track}
 ]
 
@@ -117,7 +116,8 @@ defmodule QyCoreTest do
     ]
 
     steps = [
-      {Mix, [:tuned_vocal, :bgm], :final_track}, # 这一步永远无法满足
+      # 这一步永远无法满足
+      {Mix, [:tuned_vocal, :bgm], :final_track},
       {Denoise, :raw_vocal, :clean_vocal},
       {PitchFix, :clean_vocal, :tuned_vocal}
     ]
@@ -138,26 +138,32 @@ defmodule QyCore.NestedTest do
 
   test "executes nested recipe correctly with param mapping" do
     # 1. 准备子 Recipe
-    child_recipe = Recipe.new([
-      {Denoise, :child_raw, :child_clean},
-      {PitchFix, :child_clean, :child_tuned}
-    ])
+    child_recipe =
+      Recipe.new([
+        {Denoise, :child_raw, :child_clean},
+        {PitchFix, :child_clean, :child_tuned}
+      ])
 
     # 2. 准备主 Recipe
-    main_recipe = Recipe.new([
-      {
-        Nested,
-        :parent_raw,      # 主流程提供的输入
-        :parent_result,   # 主流程期望的输出
-        [
-          recipe: child_recipe,
-          input_map: %{parent_raw: :child_raw},      # 桥接: parent -> child
-          output_map: %{child_tuned: :parent_result} # 桥接: child -> parent
-        ]
-      },
-      # 验证输出是否可用
-      {Mix, [:parent_result, :bgm], :final_mix}
-    ])
+    main_recipe =
+      Recipe.new([
+        {
+          Nested,
+          # 主流程提供的输入
+          :parent_raw,
+          # 主流程期望的输出
+          :parent_result,
+          [
+            recipe: child_recipe,
+            # 桥接: parent -> child
+            input_map: %{parent_raw: :child_raw},
+            # 桥接: child -> parent
+            output_map: %{child_tuned: :parent_result}
+          ]
+        },
+        # 验证输出是否可用
+        {Mix, [:parent_result, :bgm], :final_mix}
+      ])
 
     # 3. 初始数据
     initial_params = [
@@ -193,20 +199,24 @@ defmodule QyCore.WalkTest do
 
   test "assign_options penetrates into nested recipes" do
     # 1. 构建最内层 Recipe (Sub-Sub-Recipe)
-    inner_recipe = Recipe.new([
-      {Mix, :in, :out} # 这里的 opts 此时是空的
-    ])
+    inner_recipe =
+      Recipe.new([
+        # 这里的 opts 此时是空的
+        {Mix, :in, :out}
+      ])
 
     # 2. 构建中间层 Recipe (包含 NestedStep)
     middle_steps = [
       {NestedStep, :a, :b, [recipe: inner_recipe]}
     ]
+
     middle_recipe = Recipe.new(middle_steps)
 
     # 3. 构建最外层 Recipe
     outer_steps = [
       {NestedStep, :x, :y, [recipe: middle_recipe]}
     ]
+
     outer_recipe = Recipe.new(outer_steps)
 
     # --- 行动：在最顶层注入配置 ---
@@ -217,11 +227,13 @@ defmodule QyCore.WalkTest do
     # 这一步比较繁琐，因为要手动解包，但逻辑上就是剥洋葱
 
     # 第 1 层剥开
-    {_, _, _, opts1} = hd(updated_recipe.steps) # 外层 NestedStep
+    # 外层 NestedStep
+    {_, _, _, opts1} = hd(updated_recipe.steps)
     middle = opts1[:recipe]
 
     # 第 2 层剥开
-    {_, _, _, opts2} = hd(middle.steps) # 中间层 NestedStep
+    # 中间层 NestedStep
+    {_, _, _, opts2} = hd(middle.steps)
     inner = opts2[:recipe]
 
     # 第 3 层：终于见到了 Mix
@@ -239,6 +251,7 @@ defmodule QyCore.TelemetryTest do
 
   defmodule ReportingStep do
     use QyCore.Recipe.Step
+
     def run(_in, opts) do
       report(opts, 50, "Halfway")
       {:ok, Param.new(:out, :string, "Done")}
@@ -262,7 +275,8 @@ defmodule QyCore.TelemetryTest do
         [:qy_core, :step, :progress]
       ],
       &TestHandler.handle_event/4,
-      self() # config: 传给 handle_event 的第4个参数
+      # config: 传给 handle_event 的第4个参数
+      self()
     )
 
     # 2. 运行

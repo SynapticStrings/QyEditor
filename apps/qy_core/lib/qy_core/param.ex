@@ -11,9 +11,10 @@ defmodule QyCore.Param do
           type: param_type(),
           payload: payload(),
           metadata: map()
-  }
+        }
   defstruct [
-    :name, :type,
+    :name,
+    :type,
     :payload,
     metadata: %{}
   ]
@@ -40,6 +41,7 @@ defmodule QyCore.Param do
 
   @spec get_payload(QyCore.Param.t()) :: raw_payload
   def get_payload(%__MODULE__{payload: payload}) when is_list(payload), do: payload
+
   def get_payload(%__MODULE__{payload: {:ref, repo, id}}) do
     repo.get_param_payload(id)
   end

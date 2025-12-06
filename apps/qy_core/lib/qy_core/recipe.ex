@@ -28,7 +28,7 @@ defmodule QyCore.Recipe do
   end
 
   @doc """
-  全局注入选项 (支持深度注入)。
+  全局注入选项 (支持深度注入以及更新配置)。
 
   ### selector 的选项
 
@@ -41,30 +41,34 @@ defmodule QyCore.Recipe do
           keyword() | %{}
         ) :: QyCore.Recipe.t()
   def assign_options(%__MODULE__{} = recipe, selector, new_opts) do
-    walk(recipe, fn step ->
-      if do_match(step, selector) do
-        Step.inject_options(ensure_full_step(step), new_opts)
-      else
-        step
-      end
-    end)
+    %{
+      recipe
+      | steps:
+          walk(recipe.steps, fn step ->
+            if do_match(step, selector) do
+              Step.inject_options(ensure_full_step(step), new_opts)
+            else
+              step
+            end
+          end)
+    }
   end
 
   @doc """
-  对 Recipe 进行深度遍历。
+  对 step 列表进行深度遍历。
+
+  因为 QyCore.Scheduler.update_pending_steps_options/3 的存在，要考虑列表的存在。
+
   func 会被应用到树中的每一个 Step 上。
-  如果 Step 是嵌套的 (NestedStep)，会自动递归进入其内部的 recipe。
+  如果 Step 是 NestedStep ，会自动递归进入其内部的 step 列表。
   """
-  @spec walk(QyCore.Recipe.t(), (Step.t() -> boolean())) :: QyCore.Recipe.t()
-  def walk(%__MODULE__{steps: steps} = recipe, func) when is_function(func, 1) do
-    new_steps =
-      Enum.map(steps, fn step ->
-        modified_step = func.(step)
+  @spec walk([[Step.t()]], (Step.t() -> boolean())) :: [[Step.t()]]
+  def walk(steps, func) when is_function(func, 1) do
+    Enum.map(steps, fn step ->
+      modified_step = func.(step)
 
-        process_nested(modified_step, func)
-      end)
-
-    %{recipe | steps: new_steps}
+      process_nested(modified_step, func)
+    end)
   end
 
   defp process_nested(step, func) do
@@ -73,7 +77,7 @@ defmodule QyCore.Recipe do
     if is_atom(impl) and function_exported?(impl, :nested?, 0) and impl.nested?() do
       case Keyword.get(opts, :recipe) do
         %__MODULE__{} = inner_recipe ->
-          new_inner_recipe = walk(inner_recipe, func)
+          new_inner_recipe = %{inner_recipe | steps: walk(inner_recipe.steps, func)}
 
           new_opts = Keyword.put(opts, :recipe, new_inner_recipe)
           {impl, in_k, out_k, new_opts}

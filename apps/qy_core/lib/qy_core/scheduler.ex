@@ -14,15 +14,17 @@ defmodule QyCore.Scheduler do
           | {:ok, QyCore.Scheduler.Context.t()}
   def build(%Recipe{} = recipe, initial_params) do
     # 1. 构建 initial_map
-    initial_map = case initial_params do
-      [_ | _] ->
-      Map.new(initial_params, fn param ->
-        # 兼容 Struct 或 Map，只要有 name 字段即可
-        {Map.get(param, :name), param}
-      end)
+    initial_map =
+      case initial_params do
+        [_ | _] ->
+          Map.new(initial_params, fn param ->
+            # 兼容 Struct 或 Map，只要有 name 字段即可
+            {Map.get(param, :name), param}
+          end)
 
-      %{} -> initial_params
-    end
+        %{} ->
+          initial_params
+      end
 
     initial_keys = Map.keys(initial_map)
 
@@ -36,7 +38,7 @@ defmodule QyCore.Scheduler do
   defp do_build(recipe, initial_map) do
     # TODO: 实现注入 step options 的任务
     # injector = Keyword.get(recipe.opts, :injector, &(&1))
-    step_with_options = Enum.map(recipe.steps, &(&1))
+    step_with_options = Enum.map(recipe.steps, & &1)
 
     context = %Context{
       pending_steps: Enum.with_index(step_with_options),
@@ -56,7 +58,7 @@ defmodule QyCore.Scheduler do
   def next_ready_steps(%Context{} = ctx) do
     # 遍历 pending，看谁的 needed 是 available 的子集
     Enum.filter(ctx.pending_steps, fn {step, _idx} ->
-      {_impl, in_keys, _out} = extract_step_schema(step)
+      {_impl, in_keys, _out} = QyCore.Recipe.Step.extract_schema(step)
 
       needed = normalize_keys_to_set(in_keys)
 
@@ -98,6 +100,27 @@ defmodule QyCore.Scheduler do
     }
   end
 
+  @doc """
+  批量更新配置（运行时）。
+
+  用于外部服务挂掉重启后但还有若干 steps 的 options 使用了旧的 reference 的情况。
+  """
+  @spec update_pending_steps_options(
+          QyCore.Scheduler.Context.t(),
+          (Recipe.Step.t() -> boolean()),
+          any()
+        ) ::
+          QyCore.Scheduler.Context.t()
+  def update_pending_steps_options(%Context{} = ctx, selector, new_opts) do
+    %{
+      ctx
+      | pending_steps:
+          Recipe.walk(ctx.pending_steps, fn step ->
+            if(selector.(step), do: Recipe.Step.inject_options(step, new_opts), else: step)
+          end)
+    }
+  end
+
   @spec done?(Context.t()) :: boolean()
   def done?(%Context{pending_steps: []}), do: true
   def done?(%Context{}), do: false
@@ -110,12 +133,4 @@ defmodule QyCore.Scheduler do
     do:
       Enum.map(params, fn {k, v} -> if k == key, do: v, else: nil end)
       |> Enum.reject(&is_nil/1)
-
-  defp extract_step_schema(step) do
-    case step do
-      {impl, in_k, out_k} -> {impl, in_k, out_k}
-      {impl, in_k, out_k, _opts} -> {impl, in_k, out_k}
-      other -> QyCore.Recipe.Step.extract_schema(other)
-    end
-  end
 end
