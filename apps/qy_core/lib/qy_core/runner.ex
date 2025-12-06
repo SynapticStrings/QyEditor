@@ -1,16 +1,14 @@
 defmodule QyCore.Runner do
   import QyCore.Utilities, only: [ensure_full_step: 1]
 
-  @default_middleware_stack [
-    QyCore.Runner.Telemetry,
-    QyCore.Runner.Core
-  ]
-
-  def run(step, ctx_params, recipe_opts, middleware_stack \\ @default_middleware_stack) do
-    # 1. 静态分析 (准备元数据)
+  @spec run(
+          QyCore.Recipe.Step.t(),
+          any(),
+          keyword()
+        ) :: {:ok, QyCore.Recipe.Step.output()} | {:error, term()}
+  def run(step, ctx_params, recipe_opts) do
     {impl, in_keys, out_keys, step_opts} = ensure_full_step(step)
 
-    # 2. 构建初始上下文 (Pipeline Context)
     initial_ctx = %{
       step_implementation: impl,
       in_keys: in_keys,
@@ -20,17 +18,24 @@ defmodule QyCore.Runner do
       inputs: prepare_inputs(in_keys, ctx_params),
       recipe_opts: recipe_opts,
 
-      telemetry_meta: %{impl: impl, in_keys: in_keys, out_keys: out_keys}
+      telemetry_meta: %{impl: impl, in_keys: in_keys, out_keys: out_keys},
+
+      # 参照了 LiveView.Socket ，后面忘了
+      assigns: %{}
     }
 
-    # 3. 启动管道
+    middleware_stack =
+      [QyCore.Runner.Telemetry]
+      ++ Keyword.get(step_opts, :extra_middleware_stack, [])
+      ++ [QyCore.Runner.Core]
+
     run_pipeline(middleware_stack, initial_ctx)
   end
 
   # 递归执行管道
   defp run_pipeline([], _ctx), do: {:error, :no_executor_plugin}
 
-  # 最后一个中间件不需要 next 函数 (或者由 CoreExecutor 充当终结者)
+  # 需要注意的是，最后一个中间件不需要 next 参数
   defp run_pipeline([plug | rest], ctx) do
     next_fn = fn next_ctx -> run_pipeline(rest, next_ctx) end
     plug.call(ctx, next_fn)
@@ -38,5 +43,6 @@ defmodule QyCore.Runner do
 
   defp prepare_inputs(keys, params) when is_list(keys), do: Enum.map(keys, &Map.fetch!(params, &1))
   defp prepare_inputs(keys, params) when is_tuple(keys), do: Enum.map(Tuple.to_list(keys), &Map.fetch!(params, &1))
-  defp prepare_inputs(key, params), do: Map.fetch!(params, key)
+  # Let it crash.
+  defp prepare_inputs(key, params) when is_map(params), do: Map.fetch!(params, key)
 end

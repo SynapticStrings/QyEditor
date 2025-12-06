@@ -34,8 +34,12 @@ defmodule QyCore.Scheduler do
   end
 
   defp do_build(recipe, initial_map) do
+    # TODO: 实现注入 step options 的任务
+    # injector = Keyword.get(recipe.opts, :injector, &(&1))
+    step_with_options = Enum.map(recipe.steps, &(&1))
+
     context = %Context{
-      pending_steps: Enum.with_index(recipe.steps),
+      pending_steps: Enum.with_index(step_with_options),
       running_steps: MapSet.new(),
       available_keys: MapSet.new(Map.keys(initial_map)),
       params: initial_map,
@@ -61,7 +65,7 @@ defmodule QyCore.Scheduler do
   end
 
   @doc """
-  状态更新：当 Step 执行完后，将结果合并回 Context。
+  当 Step 执行完后，将结果合并回 Context。
   """
   @spec merge_result(
           Context.t(),
@@ -69,10 +73,8 @@ defmodule QyCore.Scheduler do
           [Param.t()] | Param.t()
         ) :: Context.t()
   def merge_result(%Context{} = ctx, step_idx, output_params) do
-    # 1. 移除 pending
     new_pending = Enum.reject(ctx.pending_steps, fn {_, idx} -> idx == step_idx end)
 
-    # 2. 合并数据
     new_params_map =
       case output_params do
         p = %Param{} ->
@@ -84,7 +86,6 @@ defmodule QyCore.Scheduler do
 
     merged_params = Map.merge(ctx.params, new_params_map)
 
-    # 3. 更新 available_keys
     new_keys = Map.keys(new_params_map)
     updated_keys = MapSet.union(ctx.available_keys, MapSet.new(new_keys))
 

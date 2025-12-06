@@ -1,6 +1,10 @@
 defmodule QyCore.Recipe do
   @moduledoc """
   定义一个处理流程（菜谱）。
+
+  ### Recipe options
+
+  关于分配参数：TBD
   """
 
   alias QyCore.Recipe.Step

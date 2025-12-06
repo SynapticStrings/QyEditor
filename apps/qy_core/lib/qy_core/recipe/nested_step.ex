@@ -6,16 +6,16 @@ defmodule QyCore.Recipe.NestedStep do
 
   - :recipe -> 要运行的内部 Recipe 结构体
   - :executor (可选) -> 指定运行子流程的执行器模块 (默认 QyCore.Executor.Serial)
-  - :input_map (可选) -> %{parent_name => child_name} 参数名映射
+  - :input_map (可选) -> %{parent_name => child_name} 参数名映射（用于两级 step 名称不一样的情形）
   - :output_map (可选) -> %{child_name => parent_name} 结果名映射
 
   ## Examples
 
       nested_step = {QyCore.Recipe.NestedStep,
-        recipe: inner_recipe,
+        recipe: inner_recipe,  # Options for recipe wrote in here!!
         executor: QyCore.Executor.Parallel,
-        input_map: %{"parent_param1" => "child_paramA"},
-        output_map: %{"child_resultX" => "parent_result1"}
+        input_map: %{"parent_param" => "child_input"},
+        output_map: %{"child_output" => "parent_result_param"}
       }
   """
 
@@ -42,6 +42,7 @@ defmodule QyCore.Recipe.NestedStep do
       end)
 
     # 启动子流程
+    # 从这里可以看出来传入的是 recipe 结构体
     case executor.execute(inner_recipe, child_initial_params) do
       {:ok, inner_results} ->
         # inner_results 是 %{name => Param}
@@ -60,7 +61,7 @@ defmodule QyCore.Recipe.NestedStep do
             end)
           else
             # 如果没定义映射，为了安全，我们应该只返回在 Step 定义中声明过的 output_keys
-            # 但 Step.run 无法直接知道自己的 output_keys 定义。
+            # 但 step.run/2 无法直接知道自己的 output_keys 定义。
             # 所以这里我们简单地返回所有子结果（除了改名的），
             # 父级 Executor 会根据 Step 定义自动丢弃不需要的。
             Map.values(inner_results)

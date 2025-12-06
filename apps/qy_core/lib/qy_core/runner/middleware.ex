@@ -6,7 +6,8 @@ defmodule QyCore.Runner.Middleware do
     step_default_opts: QyCore.Recipe.Step.step_options(),
     inputs: [QyCore.Param.t()],
     recipe_opts: keyword(),
-    telemetry_meta: %{}
+    telemetry_meta: %{},
+    assigns: %{}
   }
   @type next_fn :: (context -> {:ok, QyCore.Recipe.Step.output()} | {:error, term()})
 

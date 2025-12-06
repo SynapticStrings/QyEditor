@@ -1,6 +1,13 @@
 defmodule QyCore.Recipe.Step do
   @moduledoc """
   定义配方步骤（Step）的行为规范和类型。
+
+  ### Step options
+
+  关于 step 的选项，除了用户自定义以及插件注入外，还包括了：
+
+  * `:__report__`：源于本模块关于 `report/3` 的定义，便于主动汇报进度/状态
+  * `:extra_middleware_stack`：中间件堆栈，源于`QyCore.Runner`
   """
   alias QyCore.Param
 
