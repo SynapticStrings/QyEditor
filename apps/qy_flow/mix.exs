@@ -27,7 +27,7 @@ defmodule QyFlow.MixProject do
   defp deps do
     [
       {:gen_stage, "~> 1.2"},
-      {:qy_core, in_umbrella: true}
+      {:qy_core, git: "https://github.com/SynapticStrings/QyCore.git", branch: "core"}
     ]
   end
 end

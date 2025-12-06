@@ -23,6 +23,7 @@
 目前活跃的：
 
 - `qy_core` 应用核心业务
+  - 迁移至 <https://github.com/SynapticStrings/QyCore>
 - `qy_flow` 并行运算
 - `qy_music` 乐理支持
 - `qy_skala` 语音学支持（skala 是逻辑语中的「音节」）
