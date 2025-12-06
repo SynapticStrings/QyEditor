@@ -70,8 +70,6 @@ defmodule QyCoreTest do
   use ExUnit.Case
   doctest QyCore
 
-  alias QyCore.Executor.Serial
-
   test "runs the vocal mixing pipeline successfully" do
     # 1. 准备初始素材 (Payload 是 List)
     initial_params = [
@@ -94,7 +92,7 @@ defmodule QyCoreTest do
     recipe = Recipe.new(steps)
 
     # 3. 执行
-    assert {:ok, results} = Serial.execute(recipe, initial_params)
+    assert {:ok, results} = QyCore.run(recipe, initial_params)
 
     # 4. 验证结果
     final_param = results[:final_track]
@@ -125,7 +123,7 @@ defmodule QyCoreTest do
     recipe = Recipe.new(steps)
 
     # 预期报错
-    {:error, {:missing_inputs, idx, missing_values}} = Serial.execute(recipe, initial_params)
+    {:error, {:missing_inputs, idx, missing_values}} = QyCore.run(recipe, initial_params)
     assert idx == 0
     assert :bgm in missing_values
   end
@@ -133,7 +131,6 @@ end
 
 defmodule QyCore.NestedTest do
   use ExUnit.Case
-  alias QyCore.Executor.Serial
   alias QyCore.Recipe.NestedStep, as: Nested
 
   test "executes nested recipe correctly with param mapping" do
@@ -172,7 +169,7 @@ defmodule QyCore.NestedTest do
     ]
 
     # 4. 运行
-    assert {:ok, results} = Serial.execute(main_recipe, initial_params)
+    assert {:ok, results} = QyCore.run(main_recipe, initial_params)
 
     # 5. 验证
     final = results[:final_mix]
@@ -193,7 +190,6 @@ end
 
 defmodule QyCore.WalkTest do
   use ExUnit.Case
-  alias QyCore.Recipe
   alias QyCore.Recipe.NestedStep
   alias QySynth.Steps.Mix
 
@@ -246,8 +242,6 @@ end
 
 defmodule QyCore.TelemetryTest do
   use ExUnit.Case
-  alias QyCore.{Recipe, Param}
-  alias QyCore.Executor.Serial
 
   defmodule ReportingStep do
     use QyCore.Recipe.Step
@@ -282,7 +276,7 @@ defmodule QyCore.TelemetryTest do
     # 2. 运行
     recipe = Recipe.new([{ReportingStep, :in, :out}])
     initial = [Param.new(:in, :string, "Hi")]
-    Serial.execute(recipe, initial)
+    QyCore.run(recipe, initial)
 
     # 3. 验证收到的消息
     assert_receive {:telemetry_event, [:qy_core, :step, :start], _, %{impl: ReportingStep}}

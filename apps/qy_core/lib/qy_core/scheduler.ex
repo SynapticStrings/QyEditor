@@ -56,14 +56,19 @@ defmodule QyCore.Scheduler do
   """
   @spec next_ready_steps(QyCore.Scheduler.Context.t()) :: [{Recipe.Step.t(), non_neg_integer()}]
   def next_ready_steps(%Context{} = ctx) do
-    # 遍历 pending，看谁的 needed 是 available 的子集
-    Enum.filter(ctx.pending_steps, fn {step, _idx} ->
-      {_impl, in_keys, _out} = QyCore.Recipe.Step.extract_schema(step)
-
-      needed = normalize_keys_to_set(in_keys)
-
-      MapSet.subset?(needed, ctx.available_keys)
+    Enum.filter(ctx.pending_steps, fn {step, idx} ->
+      # 看谁的 needed 是 available 的子集
+      dependencies_met?(step, ctx.available_keys) and
+        not MapSet.member?(ctx.running_steps, idx)  # 不考虑运行的
     end)
+  end
+
+  @doc """
+  标记那些开始运行的。
+  """
+  def mark_running(%Context{} = ctx, step_indices) do
+    new_running = MapSet.union(ctx.running_steps, MapSet.new(step_indices))
+    %{ctx | running_steps: new_running}
   end
 
   @doc """
@@ -76,6 +81,7 @@ defmodule QyCore.Scheduler do
         ) :: Context.t()
   def merge_result(%Context{} = ctx, step_idx, output_params) do
     new_pending = Enum.reject(ctx.pending_steps, fn {_, idx} -> idx == step_idx end)
+    new_running = MapSet.delete(ctx.running_steps, step_idx)
 
     new_params_map =
       case output_params do
@@ -94,6 +100,7 @@ defmodule QyCore.Scheduler do
     %{
       ctx
       | pending_steps: new_pending,
+        running_steps: new_running,
         params: merged_params,
         available_keys: updated_keys,
         history: ctx.history ++ [step_idx]
@@ -133,4 +140,12 @@ defmodule QyCore.Scheduler do
     do:
       Enum.map(params, fn {k, v} -> if k == key, do: v, else: nil end)
       |> Enum.reject(&is_nil/1)
+
+  defp dependencies_met?(step, available_keys) do
+    {_impl, in_keys, _out} = QyCore.Recipe.Step.extract_schema(step)
+
+    needed = normalize_keys_to_set(in_keys)
+
+    MapSet.subset?(needed, available_keys)
+  end
 end

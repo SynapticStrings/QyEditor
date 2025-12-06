@@ -72,7 +72,7 @@ for guest <- ["Alice", "Bob", "Peter"] do
   # 3. 执行 Recipe
   {:ok, res} = steps ++ [{MyKitchen.to_guests([guest]), :sweet_coffee, :served_coffee}]
   |> QyCore.Recipe.new(name: guest)
-  |> QyCore.Executor.Serial.execute(initial_params)
+  |> QyCore.run(initial_params, {QyCore.Executor.Async, []})
   # 4. 输出结果
   # |> IO.inspect(label: "Context New Example")
 
