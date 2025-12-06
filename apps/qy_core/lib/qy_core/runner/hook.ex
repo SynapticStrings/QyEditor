@@ -1,4 +1,4 @@
-defmodule QyCore.Runner.Middleware do
+defmodule QyCore.Runner.Hook do
   @type context :: %{
           step_implementation: QyCore.Recipe.Step.implementation(),
           in_keys: QyCore.Recipe.Step.input_keys(),

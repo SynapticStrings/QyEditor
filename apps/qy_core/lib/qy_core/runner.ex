@@ -23,9 +23,9 @@ defmodule QyCore.Runner do
     }
 
     hook_stack =
-      [QyCore.Runner.Telemetry] ++
+      [QyCore.Runner.Hooks.Telemetry] ++
         Keyword.get(step_opts, :extra_hook_stack, []) ++
-        [QyCore.Runner.Core]
+        [QyCore.Runner.Hooks.Core]
 
     run_pipeline(hook_stack, initial_ctx)
   end

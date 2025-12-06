@@ -1,5 +1,5 @@
-defmodule QyCore.Runner.Core do
-  @behaviour QyCore.Runner.Middleware
+defmodule QyCore.Runner.Hooks.Core do
+  @behaviour QyCore.Runner.Hook
 
   alias QyCore.Param
 

@@ -1,5 +1,5 @@
-defmodule QyCore.Runner.Telemetry do
-  @behaviour QyCore.Runner.Middleware
+defmodule QyCore.Runner.Hooks.Telemetry do
+  @behaviour QyCore.Runner.Hook
 
   def call(ctx, next) do
     meta = ctx.telemetry_meta
