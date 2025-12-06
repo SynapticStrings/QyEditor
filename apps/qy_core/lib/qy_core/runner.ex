@@ -6,7 +6,7 @@ defmodule QyCore.Runner do
     QyCore.Runner.Core
   ]
 
-  def run(step, ctx_params, opts, middleware_stack \\ @default_middleware_stack) do
+  def run(step, ctx_params, recipe_opts, middleware_stack \\ @default_middleware_stack) do
     # 1. 静态分析 (准备元数据)
     {impl, in_keys, out_keys, step_opts} = ensure_full_step(step)
 
@@ -15,10 +15,10 @@ defmodule QyCore.Runner do
       step_implementation: impl,
       in_keys: in_keys,
       out_keys: out_keys,
+
       step_default_opts: step_opts,
       inputs: prepare_inputs(in_keys, ctx_params),
-
-      opts: opts,
+      recipe_opts: recipe_opts,
 
       telemetry_meta: %{impl: impl, in_keys: in_keys, out_keys: out_keys}
     }

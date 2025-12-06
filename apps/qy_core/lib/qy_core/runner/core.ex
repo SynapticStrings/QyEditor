@@ -16,7 +16,7 @@ defmodule QyCore.Runner.Core do
     # 注入资源
     final_opts =
       ctx.step_default_opts
-      |> Keyword.merge(ctx.opts)
+      |> Keyword.merge(ctx.recipe_opts)
       |> Keyword.put(:__reporter__, reporter_fn)
 
     case run_step(ctx.step_implementation, ctx.inputs, final_opts) do
