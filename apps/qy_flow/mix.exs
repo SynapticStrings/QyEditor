@@ -27,7 +27,7 @@ defmodule QyFlow.MixProject do
   defp deps do
     [
       {:gen_stage, "~> 1.2"},
-      {:qy_core, git: "https://github.com/SynapticStrings/QyCore.git", tag: "0.2.0"}
+      {:orchid, git: "https://github.com/SynapticStrings/Orchid.git", tag: "0.3.0"}
     ]
   end
 end

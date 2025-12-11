@@ -22,8 +22,8 @@
 
 目前活跃的：
 
-- `qy_core` 应用核心业务
-  - 迁移至 <https://github.com/SynapticStrings/QyCore>
+- `orchid` （原 `qy_core`）应用核心业务
+  - 迁移至 <https://github.com/SynapticStrings/Orchid>
 - `qy_flow` 并行运算
 - `qy_music` 乐理支持
 - `qy_skala` 语音学支持（skala 是逻辑语中的「音节」）
@@ -38,6 +38,6 @@
 
 调用顺序：
 
-> 用户通过网络（或其他形式）发出请求，经过 `qy_core` 更新输入的状态，调用对应的模型生成新音频再返回。
+> 用户通过网络（或其他形式）发出请求，经过 `orchid` 更新输入的状态，调用对应的模型生成新音频再返回。
 
 其联系在原型阶段由手写代码实现。
