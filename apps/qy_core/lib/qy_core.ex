@@ -1,6 +1,6 @@
-defmodule QySkala do
+defmodule QyCore do
   @moduledoc """
-  Documentation for `QySkala`.
+  Documentation for `QyCore`.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule QySkala do
 
   ## Examples
 
-      iex> QySkala.hello()
+      iex> QyCore.hello()
       :world
 
   """
