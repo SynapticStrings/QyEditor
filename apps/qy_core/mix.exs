@@ -26,8 +26,8 @@ defmodule QyCore.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:orchid, "~> 0.4.0"},
-      {:orchid_symbiont, git: "https://github.com/SynapticStrings/OrchidSymbiont.git"},
+      {:orchid, "~> 0.4"},
+      {:orchid_symbiont, "~> 0.1"},
     ]
   end
 end

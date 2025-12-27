@@ -1,6 +1,6 @@
 %{
   "jason": {:hex, :jason, "1.4.4", "b9226785a9aa77b6857ca22832cffa5d5011a667207eb2a0ad56adb5db443b8a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "c5eb0cab91f094599f94d55bc63409236a8ec69a21a67814529e8d5f6cc90b3b"},
-  "orchid": {:hex, :orchid, "0.4.0", "ae0aaa160117c32048fdd22644fc34f0562b364102b71698ae038f2381b22c90", [:mix], [{:telemetry, "~> 1.3", [hex: :telemetry, repo: "hexpm", optional: false]}], "hexpm", "0d73586e81fc6f28ab7bc691896aec46d774bd0f36ebbcea09f85cb268f1b8d1"},
-  "orchid_symbiont": {:git, "https://github.com/SynapticStrings/OrchidSymbiont.git", "d62af93e8ff6a8189acc3f03d6392e791755804c", []},
+  "orchid": {:hex, :orchid, "0.4.1", "d3ab3c6ea1e70571e7af9ed088854a61e1da4b7831ed40b5aca0fdb91a9f147e", [:mix], [{:telemetry, "~> 1.3", [hex: :telemetry, repo: "hexpm", optional: false]}], "hexpm", "583a5011714019cc182a33d040ca61c9c5dddbef0aac19c31a68ba5014d52e13"},
+  "orchid_symbiont": {:hex, :orchid_symbiont, "0.1.1", "42c2dbc5f830e9534903bb7acf69f643af7f199382030cda6d08359e13660879", [:mix], [{:orchid, "~> 0.4", [hex: :orchid, repo: "hexpm", optional: false]}], "hexpm", "5d6931434950fbd6510ef371ddfa17d925c0d9fcb74b26a8884b89773357d383"},
   "telemetry": {:hex, :telemetry, "1.3.0", "fedebbae410d715cf8e7062c96a1ef32ec22e764197f70cda73d82778d61e7a2", [:rebar3], [], "hexpm", "7015fc8919dbe63764f4b4b87a95b7c0996bd539e0d499be6ec9d7f3875b79e6"},
 }
