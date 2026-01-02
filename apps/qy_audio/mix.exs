@@ -1,9 +1,9 @@
-defmodule QyCore.MixProject do
+defmodule QyAudio.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :qy_core,
+      app: :qy_audio,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -19,16 +19,19 @@ defmodule QyCore.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {QyCore.Application, []}
+      mod: {QyAudio.Application, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:orchid, "~> 0.5"},
-      {:orchid_symbiont, "~> 0.1"},
-      {:qy_audio, in_umbrella: true}
+      # 音频处理相关依赖
+      # {:portaudio, "~> 1.0"},  # 可以考虑添加 PortAudio 支持
+      # {:soundfile, "~> 0.1"},  # 音频文件处理
+      
+      # 内部依赖
+      {:qy_music, in_umbrella: true}
     ]
   end
 end
